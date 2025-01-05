@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
                 await recordUsage({
                   userId,
                   ...usage,
-                  model: "gemini-pro"
+                  model: "gemini-2.0-flash-exp"
                 });
                 
                 controller.close();
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
             await recordUsage({
               userId,
               ...usage,
-              model: "gemini-pro"
+              model: "gemini-2.0-flash-exp"
             });
 
             console.log('Model response received successfully:', responseText);
