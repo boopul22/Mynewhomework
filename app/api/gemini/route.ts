@@ -11,98 +11,112 @@ if (!apiKey) {
 
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Convert buffer to base64
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const prompt = formData.get('prompt') as string
-    const file = formData.get('file') as File | null
+    const history = formData.get('history') as string || '[]'
+    const isStreaming = formData.get('stream') === 'true'
 
-    let base64Data: string | undefined
-    let mimeType: string | undefined
-
-    if (file) {
-      try {
-        const buffer = await file.arrayBuffer()
-        base64Data = arrayBufferToBase64(buffer)
-        mimeType = file.type
-        console.log('File processed successfully:', {
-          fileName: file.name,
-          mimeType,
-          size: file.size,
-          base64Length: base64Data.length
-        })
-      } catch (error) {
-        console.error('Error processing file:', error)
-        return NextResponse.json(
-          { error: 'Failed to process uploaded file' },
-          { status: 400 }
-        )
-      }
+    if (!prompt) {
+      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
     }
 
+    console.log("Received request with prompt:", prompt, "history:", history, "isStreaming:", isStreaming);
+
+    // Parse chat history
+    const chatHistory = JSON.parse(history) as { role: 'user' | 'model', parts: { text: string }[] }[]
+
+    // Use gemini-pro model for better stability
+    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
+      console.log('Making request to Gemini with model: gemini-pro')
+      let result;
 
-      let content: any[] = []
+      // Text-only chat
+      console.log("Text-only chat, history:", chatHistory);
+      const chat = model.startChat({
+        history: chatHistory,
+        generationConfig: {
+          maxOutputTokens: 2048,
+          temperature: 0.7,
+          topP: 0.8,
+          topK: 40,
+        },
+      });
 
-      // Add text prompt if provided
-      if (prompt) {
-        content.push(prompt)
-      }
-
-      // Add image if provided
-      if (base64Data && mimeType?.startsWith('image/')) {
-        content.push({
-          inlineData: {
-            data: base64Data,
-            mimeType
+      if (isStreaming) {
+        const streamingResponse = await chat.sendMessageStream(prompt);
+        console.log("Streaming response initiated");
+        
+        // Set up streaming response
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+          async start(controller) {
+            try {
+              for await (const chunk of streamingResponse.stream) {
+                const text = chunk.text();
+                controller.enqueue(encoder.encode(text));
+              }
+              controller.close();
+            } catch (error) {
+              console.error('Streaming error:', error);
+              controller.error(error);
+            }
           }
-        })
-      } else if (file) {
-        // For non-image files, append filename to prompt
-        content[0] = (content[0] || '') + `\n\nAttached file name: ${file.name}`
-      }
-      
-      console.log('Request Payload:', content)
+        });
 
-      const result = await model.generateContent(content)
-      const response = await result.response
-      
-      if (!response || typeof response.text !== 'string') {
-        console.error('Invalid response format:', response)
-        return NextResponse.json(
-          { error: 'Invalid response format from Gemini API' },
-          { status: 500 }
-        )
-      }
+        return new NextResponse(stream, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+          },
+        });
+      } else {
+        try {
+          result = await chat.sendMessage(prompt);
+          console.log("Non-streaming response received:", result);
+          
+          if (!result || !result.response) {
+            throw new Error('Empty response from Gemini API');
+          }
 
-      console.log('Model response received successfully:', response.text)
-      return NextResponse.json({ response: response.text })
+          const responseText = result.response.text();
+          if (typeof responseText !== 'string') {
+            throw new Error('Invalid response format: response text is not a string');
+          }
+
+          console.log('Model response received successfully:', responseText);
+          return NextResponse.json({ 
+            response: responseText,
+            history: [...chatHistory, 
+              { role: 'user', parts: [{ text: prompt }] },
+              { role: 'model', parts: [{ text: responseText }] }
+            ]
+          });
+        } catch (error: any) {
+          console.error('Error in chat response:', error);
+          throw error;
+        }
+      }
     } catch (error: any) {
-      console.error('Error calling model:', error)
-      console.error('Full Error Object:', JSON.stringify(error, null, 2))
+      console.error('Error calling Gemini API:', error);
       return NextResponse.json(
-        { error: error.message || 'Failed to process model response' },
+        { 
+          error: 'Failed to get response from Gemini',
+          details: error.message,
+          stack: error.stack
+        },
         { status: 500 }
       )
     }
   } catch (error: any) {
-    console.error('API Error:', error)
-    console.error('Full API Error Object:', error)
+    console.error('API Error:', error);
     return NextResponse.json(
-      {
-        error: error.message || 'Failed to process the request',
-        details: error.toString()
+      { 
+        error: 'Failed to process the request',
+        details: error.message,
+        stack: error.stack
       },
       { status: 500 }
     )

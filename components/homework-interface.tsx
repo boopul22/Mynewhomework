@@ -10,21 +10,14 @@ import { cn } from "@/lib/utils"
 interface Message {
   role: 'user' | 'assistant'
   content: string
-  attachments?: {
-    type: 'file' | 'image'
-    name: string
-    url: string
-  }[]
 }
 
 export default function HomeworkInterface() {
   const [question, setQuestion] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -42,51 +35,28 @@ export default function HomeworkInterface() {
     }
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      // Check file size (limit to 10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        alert('File size should be less than 10MB')
-        return
-      }
-      
-      // Check file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-      if (!allowedTypes.includes(file.type)) {
-        alert('Only images (JPEG, PNG, GIF) and documents (PDF, DOC, DOCX) are allowed')
-        return
-      }
-      
-      setSelectedFile(file)
-    }
-  }
-
   const handleSendMessage = async () => {
-    if (!question.trim() && !selectedFile) return
+    if (!question.trim()) return
+    console.log("Sending message with question:", question);
 
     const formData = new FormData()
     formData.append('prompt', question)
-    if (selectedFile) {
-      formData.append('file', selectedFile)
-    }
+    
+    // Add history to the form data
+    const history = messages.map(message => ({
+        role: message.role === 'user' ? 'user' : 'model',
+        parts: [{ text: message.content }]
+    }));
+    formData.append('history', JSON.stringify(history));
+    formData.append('stream', 'false'); // Explicitly set stream to false for now
 
     const newMessage: Message = {
       role: 'user',
-      content: question,
-      attachments: selectedFile ? [{
-        type: selectedFile.type.startsWith('image/') ? 'image' : 'file',
-        name: selectedFile.name,
-        url: URL.createObjectURL(selectedFile)
-      }] : undefined
+      content: question
     }
 
     setMessages(prev => [...prev, newMessage])
     setQuestion("")
-    setSelectedFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
     setIsLoading(true)
     scrollToBottom()
 
@@ -95,6 +65,7 @@ export default function HomeworkInterface() {
         method: 'POST',
         body: formData,
       })
+      console.log("API Response:", response);
 
       if (!response.ok) {
         const errorData = await response.text()
@@ -105,6 +76,7 @@ export default function HomeworkInterface() {
       }
 
       const data = await response.json()
+      console.log("API Data:", data);
       
       if (!data || !data.response) {
         throw new Error('Invalid response format from API')
@@ -268,22 +240,6 @@ export default function HomeworkInterface() {
                   </Avatar>
                   <div className="flex-1">
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    {message.attachments?.map((attachment, i) => (
-                      <div key={i} className="mt-2">
-                        {attachment.type === 'image' ? (
-                          <img 
-                            src={attachment.url} 
-                            alt={attachment.name}
-                            className="max-w-sm rounded-lg border"
-                          />
-                        ) : (
-                          <div className="flex items-center gap-2 p-2 rounded-lg border">
-                            <Book className="h-4 w-4" />
-                            <span className="text-sm">{attachment.name}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
                   </div>
                 </div>
               </div>
@@ -307,25 +263,6 @@ export default function HomeworkInterface() {
         {/* Question Input */}
         <div className="border-t bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
           <div className="p-4">
-            <div className="flex items-center gap-2 mb-4 pb-4 border-b">
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                accept="image/*,.pdf,.doc,.docx"
-                className="hidden"
-              />
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className={cn(selectedFile && "bg-blue-100 dark:bg-blue-900")}
-              >
-                {selectedFile ? selectedFile.name : "Upload File"}
-              </Button>
-              <Button variant="ghost" size="sm">Draw</Button>
-              <Button variant="ghost" size="sm">Formula</Button>
-            </div>
             <div className="flex gap-4">
               <textarea
                 ref={textareaRef}
