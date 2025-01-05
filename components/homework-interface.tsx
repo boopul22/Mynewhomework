@@ -64,6 +64,7 @@ export default function HomeworkInterface() {
 
     const formData = new FormData()
     formData.append('prompt', question)
+    formData.append('userId', 'user-' + Math.random().toString(36).substr(2, 9))
     if (imageFile) {
       formData.append('image', imageFile)
     }

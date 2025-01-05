@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { startChatSession } from '@/lib/gemini'
 import { teacherModelConfig } from '@/lib/teacher-model-config'
+import { recordUsage } from '@/lib/firebase-db'
+import { calculateUsageStats } from '@/lib/token-counter'
 
 // Ensure the API key is loaded from the environment
 const apiKey = process.env.GEMINI_API_KEY;
@@ -31,6 +33,7 @@ export async function POST(request: NextRequest) {
     const prompt = formData.get('prompt') as string
     const imageData = formData.get('image') as string | null
     const isStreaming = formData.get('stream') === 'true'
+    const userId = formData.get('userId') as string || 'anonymous'
 
     if (!prompt) {
       return new NextResponse('Error: Prompt is required', {
@@ -45,7 +48,6 @@ export async function POST(request: NextRequest) {
 
     try {
       if (imageData) {
-        // Use Gemini Pro Vision for image input
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
         
         const imageBytes = base64ToUint8Array(imageData);
@@ -62,6 +64,14 @@ export async function POST(request: NextRequest) {
         
         const response = await result.response;
         const responseText = response.text();
+
+        // Record usage for image-based requests
+        const usage = calculateUsageStats(prompt, responseText);
+        await recordUsage({
+          userId,
+          ...usage,
+          model: "gemini-2.0-flash-exp"
+        });
         
         return new NextResponse(responseText, {
           headers: {
@@ -69,7 +79,6 @@ export async function POST(request: NextRequest) {
           }
         });
       } else {
-        // Use regular chat for text-only input
         console.log('Starting chat session')
         const chat = await startChatSession([]);
 
@@ -77,15 +86,25 @@ export async function POST(request: NextRequest) {
           const streamingResponse = await chat.sendMessageStream(prompt);
           console.log("Streaming response initiated");
           
-          // Set up streaming response
+          let fullResponse = '';
           const encoder = new TextEncoder();
           const stream = new ReadableStream({
             async start(controller) {
               try {
                 for await (const chunk of streamingResponse.stream) {
                   const text = chunk.text();
+                  fullResponse += text;
                   controller.enqueue(encoder.encode(text));
                 }
+                
+                // Record usage after collecting the full response
+                const usage = calculateUsageStats(prompt, fullResponse);
+                await recordUsage({
+                  userId,
+                  ...usage,
+                  model: "gemini-pro"
+                });
+                
                 controller.close();
               } catch (error) {
                 console.error('Streaming error:', error);
@@ -109,6 +128,15 @@ export async function POST(request: NextRequest) {
             }
 
             const responseText = result.response.text();
+            
+            // Record usage for non-streaming requests
+            const usage = calculateUsageStats(prompt, responseText);
+            await recordUsage({
+              userId,
+              ...usage,
+              model: "gemini-pro"
+            });
+
             console.log('Model response received successfully:', responseText);
             
             return new NextResponse(responseText, {
