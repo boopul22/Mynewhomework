@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { startChatSession } from '@/lib/gemini'
 
 // Ensure the API key is loaded from the environment
 const apiKey = process.env.GEMINI_API_KEY;
@@ -27,24 +28,9 @@ export async function POST(request: NextRequest) {
     // Parse chat history
     const chatHistory = JSON.parse(history) as { role: 'user' | 'model', parts: { text: string }[] }[]
 
-    // Use gemini-pro model for better stability
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
-
     try {
-      console.log('Making request to Gemini with model: gemini-pro')
-      let result;
-
-      // Text-only chat
-      console.log("Text-only chat, history:", chatHistory);
-      const chat = model.startChat({
-        history: chatHistory,
-        generationConfig: {
-          maxOutputTokens: 2048,
-          temperature: 0.7,
-          topP: 0.8,
-          topK: 40,
-        },
-      });
+      console.log('Starting chat session with history:', chatHistory)
+      const chat = await startChatSession(chatHistory);
 
       if (isStreaming) {
         const streamingResponse = await chat.sendMessageStream(prompt);
@@ -74,7 +60,7 @@ export async function POST(request: NextRequest) {
         });
       } else {
         try {
-          result = await chat.sendMessage(prompt);
+          const result = await chat.sendMessage(prompt);
           console.log("Non-streaming response received:", result);
           
           if (!result || !result.response) {
