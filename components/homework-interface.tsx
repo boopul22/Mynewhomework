@@ -16,8 +16,10 @@ export default function HomeworkInterface() {
   const [question, setQuestion] = useState("")
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [imageFile, setImageFile] = useState<string | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -35,6 +37,18 @@ export default function HomeworkInterface() {
     }
   }
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64String = reader.result as string
+        setImageFile(base64String)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSendMessage = async () => {
     if (!question.trim()) return
     console.log("Sending message with question:", question);
@@ -42,21 +56,30 @@ export default function HomeworkInterface() {
     const formData = new FormData()
     formData.append('prompt', question)
     
+    // Add image if present
+    if (imageFile) {
+      formData.append('image', imageFile)
+    }
+    
     // Add history to the form data
     const history = messages.map(message => ({
         role: message.role === 'user' ? 'user' : 'model',
         parts: [{ text: message.content }]
     }));
     formData.append('history', JSON.stringify(history));
-    formData.append('stream', 'false'); // Explicitly set stream to false for now
+    formData.append('stream', 'false');
 
     const newMessage: Message = {
       role: 'user',
-      content: question
+      content: question + (imageFile ? ' [Image attached]' : '')
     }
 
     setMessages(prev => [...prev, newMessage])
     setQuestion("")
+    setImageFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
     setIsLoading(true)
     scrollToBottom()
 
@@ -261,18 +284,43 @@ export default function HomeworkInterface() {
         </div>
 
         {/* Question Input */}
-        <div className="border-t bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-          <div className="p-4">
-            <div className="flex gap-4">
+        <div className="p-4 border-t bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+          <div className="flex flex-col gap-4">
+            {imageFile && (
+              <div className="relative w-32 h-32">
+                <img 
+                  src={imageFile} 
+                  alt="Uploaded preview" 
+                  className="w-full h-full object-cover rounded-lg"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-1 right-1 h-6 w-6 bg-black/50 hover:bg-black/70 text-white rounded-full"
+                  onClick={() => setImageFile(null)}
+                >
+                  ×
+                </Button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+                ref={fileInputRef}
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
               <textarea
                 ref={textareaRef}
-                placeholder="Type your homework question here..."
-                className={cn(
-                  "flex-1 resize-none outline-none text-sm bg-transparent",
-                  "min-h-[40px] max-h-[200px] py-2",
-                  "placeholder:text-muted-foreground"
-                )}
-                rows={1}
                 value={question}
                 onChange={(e) => {
                   setQuestion(e.target.value)
@@ -284,21 +332,17 @@ export default function HomeworkInterface() {
                     handleSendMessage()
                   }
                 }}
+                placeholder="Ask your question..."
+                className="flex-1 resize-none rounded-lg border p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                rows={1}
               />
-              <Button 
-                className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-                size="icon"
+              <Button
                 onClick={handleSendMessage}
-                disabled={isLoading || !question.trim()}
+                disabled={!question.trim() || isLoading}
+                className="h-10 w-10"
               >
                 <Send className="h-4 w-4" />
-                <span className="sr-only">Send question</span>
               </Button>
-            </div>
-            <div className="flex items-center gap-2 mt-4">
-              <Button variant="ghost" size="sm">📚 Subject Guides</Button>
-              <Button variant="ghost" size="sm">📝 Practice Problems</Button>
-              <Button variant="ghost" size="sm">🎯 Study Tools</Button>
             </div>
           </div>
         </div>
