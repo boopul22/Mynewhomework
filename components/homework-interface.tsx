@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
+import remarkGfm from 'remark-gfm'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -281,6 +282,7 @@ export default function HomeworkInterface() {
                     </div>
                     <div className="text-base leading-relaxed prose dark:prose-invert max-w-none">
                       <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
                         components={{
                           code: (props: any) => {
                             const {className, children} = props
@@ -298,7 +300,27 @@ export default function HomeworkInterface() {
                                 {children}
                               </code>
                             )
-                          }
+                          },
+                          table: (props) => (
+                            <div className="overflow-x-auto my-4">
+                              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700" {...props} />
+                            </div>
+                          ),
+                          thead: (props) => (
+                            <thead className="bg-gray-50 dark:bg-gray-800" {...props} />
+                          ),
+                          tbody: (props) => (
+                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900" {...props} />
+                          ),
+                          tr: (props) => (
+                            <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" {...props} />
+                          ),
+                          th: (props) => (
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" {...props} />
+                          ),
+                          td: (props) => (
+                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap" {...props} />
+                          )
                         }}
                       >
                         {formatMessage(message.content)}
