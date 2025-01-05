@@ -3,56 +3,29 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { MoreHorizontal, Plus, Settings, Square, Maximize2, Send, Search, Book, Calculator, PenTool, Microscope, History, Brain } from 'lucide-react'
-import { useState, useRef, useEffect } from "react"
-import { cn } from "@/lib/utils"
+import { Settings, Send, Calculator, Book, Microscope, History, Brain, Upload } from 'lucide-react'
+import { useState, useRef } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import remarkGfm from 'remark-gfm'
 
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-  timestamp?: Date
-}
-
-const removeAsterisks = (text: string) => {
-  return text.replace(/\*/g, '')
-}
-
-const formatMessage = (content: string) => {
-  // Remove any unnecessary whitespace at the start and end
-  content = content.trim()
-  // Ensure code blocks are properly formatted
-  content = content.replace(/```(\w+)?\n/g, '```$1\n')
-  return content
-}
-
 export default function HomeworkInterface() {
   const [question, setQuestion] = useState("")
-  const [messages, setMessages] = useState<Message[]>([])
+  const [subject, setSubject] = useState<string>("Mathematics")
+  const [answer, setAnswer] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<string | null>(null)
-  const chatEndRef = useRef<HTMLDivElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [isStreaming, setIsStreaming] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const scrollToBottom = () => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  const adjustTextareaHeight = () => {
-    const textarea = textareaRef.current
-    if (textarea) {
-      textarea.style.height = 'auto'
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`
-    }
-  }
+  const subjects = [
+    { icon: Calculator, label: 'Mathematics' },
+    { icon: Book, label: 'English' },
+    { icon: Microscope, label: 'Science' },
+    { icon: History, label: 'History' },
+    { icon: Brain, label: 'Study Tips' },
+  ]
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -66,349 +39,162 @@ export default function HomeworkInterface() {
     }
   }
 
-  const handleSendMessage = async () => {
+  const handleSubmit = async () => {
     if (!question.trim()) return
-    console.log("Sending message with question:", question);
 
     const formData = new FormData()
     formData.append('prompt', question)
-    
-    // Add image if present
     if (imageFile) {
       formData.append('image', imageFile)
     }
-    
-    formData.append('stream', 'false');
+    formData.append('stream', 'true')
 
-    const newMessage: Message = {
-      role: 'user',
-      content: question + (imageFile ? ' [Image attached]' : '')
-    }
-
-    setMessages(prev => [...prev, newMessage])
-    setQuestion("")
-    setImageFile(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
     setIsLoading(true)
-    scrollToBottom()
+    setIsStreaming(true)
+    setAnswer("")
 
     try {
       const response = await fetch('/api/gemini', {
         method: 'POST',
         body: formData,
       })
-      console.log("API Response:", response);
 
       if (!response.ok) {
-        const errorData = await response.text()
-        console.error('API Error Response:', errorData)
-        throw new Error(
-          `API request failed with status ${response.status}: ${errorData}`
-        )
+        throw new Error(`API request failed with status ${response.status}`)
       }
 
-      const responseText = await response.text()
-      console.log("API Response Text:", responseText);
-      
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: responseText
-      }])
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('No reader available')
+
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const text = decoder.decode(value)
+        setAnswer(prev => prev + text)
+      }
     } catch (error: any) {
-      console.error('Error:', error)
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: `Sorry, I encountered an error while processing your request: ${error.message || 'Unknown error'}`
-      }])
+      setAnswer(`Sorry, I encountered an error: ${error.message || 'Unknown error'}`)
     } finally {
       setIsLoading(false)
-      scrollToBottom()
+      setIsStreaming(false)
     }
   }
 
-  const startNewChat = () => {
-    setMessages([])
+  const clearForm = () => {
     setQuestion("")
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"
-      textareaRef.current.focus()
+    setAnswer("")
+    setImageFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
-
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        handleSendMessage();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [question]);
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] bg-[#f5f5f0]">
-      {/* Sidebar */}
-      <div className="w-72 flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 shadow-lg transition-all duration-200 ease-in-out">
-        <div className="flex flex-col h-full p-4">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6 border-b pb-4">
-            <div className="flex items-center gap-2">
-              <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-serif font-bold hover:bg-blue-700 transition-colors">
-                H
-              </div>
-              <span className="font-serif font-semibold text-xl">HomeworkHelper</span>
+    <div className="flex h-full bg-[#f5f5f0]">
+      {/* Subject Selection Sidebar */}
+      <div className="w-72 bg-white dark:bg-gray-900 border-r border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center text-white font-serif font-bold">
+              H
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8 hover:bg-blue-50 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Settings"
+            <span className="font-serif font-semibold text-xl">HomeworkHelper</span>
+          </div>
+        </div>
+
+        <h2 className="text-lg font-semibold mb-4">Select Subject</h2>
+        <div className="space-y-2">
+          {subjects.map(({ icon: Icon, label }) => (
+            <Button
+              key={label}
+              variant={subject === label ? "default" : "ghost"}
+              className="w-full justify-start gap-3 text-left"
+              onClick={() => setSubject(label)}
             >
-              <Settings className="h-4 w-4" />
+              <Icon className="h-5 w-5" />
+              {label}
             </Button>
-          </div>
-
-          {/* User Profile with better hover state */}
-          <div className="flex items-center gap-2 mb-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all cursor-pointer">
-            <Avatar className="h-8 w-8 ring-2 ring-offset-2 ring-blue-500">
-              <AvatarImage src="/placeholder-user.jpg" alt="Student" />
-              <AvatarFallback>ST</AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium">Student</span>
-          </div>
-
-          {/* Enhanced Search */}
-          <div className="relative mb-4 group">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-hover:text-blue-500 transition-colors" />
-            <input
-              type="text"
-              placeholder="Search your questions..."
-              className="w-full pl-9 pr-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-              aria-label="Search questions"
-            />
-          </div>
-
-          {/* Subjects Navigation with improved hover states */}
-          <nav className="space-y-1 mb-4">
-            {[
-              { icon: Calculator, label: 'Mathematics' },
-              { icon: Book, label: 'English' },
-              { icon: Microscope, label: 'Science' },
-              { icon: History, label: 'History' },
-              { icon: Brain, label: 'Study Tips' },
-            ].map(({ icon: Icon, label }) => (
-              <Button
-                key={label}
-                variant="ghost"
-                className="w-full justify-start gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-              >
-                <Icon className="h-4 w-4" />
-                <span>{label}</span>
-              </Button>
-            ))}
-          </nav>
-
-          {/* Enhanced New Question Button */}
-          <Button 
-            onClick={startNewChat}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4 gap-2 transform hover:scale-[1.02] transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            <Plus className="h-4 w-4" />
-            Ask new question
-          </Button>
+          ))}
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col bg-[#f5f5f0] dark:from-gray-900 dark:to-gray-950">
-        {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm sticky top-0 z-10 border-b border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3">
-            <h1 className="font-serif text-lg font-semibold">Homework Helper</h1>
-            <div className="text-xs px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">
-              Smart Tutor
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="gap-2 font-serif hover:bg-blue-50"
-            >
-              <PenTool className="h-4 w-4" />
-              Notes
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="gap-2 font-serif hover:bg-blue-50"
-            >
-              <Calculator className="h-4 w-4" />
-              Calculator
-            </Button>
-          </div>
-        </header>
-
-        {/* Chat Area */}
-        <div 
-          className="flex-1 overflow-auto p-6 space-y-6 scrollbar-hide" 
-          role="log"
-          aria-live="polite"
-        >
-          <div className="space-y-6 max-w-5xl mx-auto">
-            {messages.map((message, index) => (
-              <div
-                key={index}
-                className={cn(
-                  "p-6 rounded-lg",
-                  message.role === "user"
-                    ? "bg-white shadow-md ml-auto max-w-[95%] border border-gray-100"
-                    : "bg-blue-50 mr-auto max-w-[95%] border border-blue-100 font-serif"
-                )}
-              >
-                <div className="flex items-start gap-4">
-                  {message.role === "assistant" && (
-                    <Avatar className="h-10 w-10 flex-shrink-0">
-                      <AvatarImage src="/teacher-avatar.png" />
-                      <AvatarFallback className="bg-blue-100 text-blue-600">T</AvatarFallback>
-                    </Avatar>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base mb-2 text-gray-500">
-                      {message.role === "user" ? "You" : "Teacher"}
-                    </div>
-                    <div className="text-base leading-relaxed prose dark:prose-invert max-w-none">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm]}
-                        components={{
-                          code: (props: any) => {
-                            const {className, children} = props
-                            const match = /language-(\w+)/.exec(className || '')
-                            return match ? (
-                              <SyntaxHighlighter
-                                style={vscDarkPlus}
-                                language={match[1]}
-                                PreTag="div"
-                              >
-                                {String(children).replace(/\n$/, '')}
-                              </SyntaxHighlighter>
-                            ) : (
-                              <code className={cn("bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5", className)}>
-                                {children}
-                              </code>
-                            )
-                          },
-                          table: (props) => (
-                            <div className="overflow-x-auto my-4">
-                              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700" {...props} />
-                            </div>
-                          ),
-                          thead: (props) => (
-                            <thead className="bg-gray-50 dark:bg-gray-800" {...props} />
-                          ),
-                          tbody: (props) => (
-                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900" {...props} />
-                          ),
-                          tr: (props) => (
-                            <tr className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors" {...props} />
-                          ),
-                          th: (props) => (
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" {...props} />
-                          ),
-                          td: (props) => (
-                            <td className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 whitespace-nowrap" {...props} />
-                          )
-                        }}
-                      >
-                        {formatMessage(message.content)}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {messages.length === 0 && (
-              <div className="p-8 bg-white rounded-xl shadow-md border border-gray-100">
-                <h2 className="font-serif text-xl font-semibold mb-4 text-blue-600 dark:text-blue-400">Welcome to HomeworkHelper! 📚</h2>
-                <p className="text-sm mb-6 text-gray-600 dark:text-gray-300 leading-relaxed">
-                  I'm your personal homework assistant. Feel free to ask any questions about your studies!
-                </p>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { icon: Calculator, label: 'Math Problems' },
-                    { icon: Book, label: 'Essay Help' },
-                    { icon: Microscope, label: 'Science Questions' },
-                    { icon: Brain, label: 'Study Tips' },
-                  ].map(({ icon: Icon, label }) => (
-                    <div key={label} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-blue-50 transition-colors cursor-pointer">
-                      <Icon className="h-5 w-5 text-blue-600" />
-                      <span className="text-sm font-medium">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-        </div>
-
-        {/* Input Area */}
-        <div className="p-4 bg-white border-t border-gray-200 dark:bg-gray-900 dark:border-gray-800">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex items-end gap-4">
-              <div className="flex-1 bg-gray-50 dark:bg-gray-800 rounded-lg p-2 border border-gray-200 dark:border-gray-700">
-                <textarea
-                  ref={textareaRef}
-                  value={question}
-                  onChange={(e) => {
-                    setQuestion(e.target.value)
-                    adjustTextareaHeight()
-                  }}
-                  placeholder="Type your question here..."
-                  className="w-full bg-transparent border-0 focus:ring-0 resize-none text-sm min-h-[40px] max-h-[200px] font-serif"
-                  style={{ height: 'auto' }}
-                />
-                <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageUpload}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Image
-                  </Button>
-                  {imageFile && <span className="text-xs text-blue-600">Image attached</span>}
-                </div>
-              </div>
+      <div className="flex-1 flex flex-col p-6 gap-6 overflow-y-auto">
+        <Card className="p-6">
+          <h1 className="text-2xl font-semibold mb-2">Ask Your Question</h1>
+          <p className="text-muted-foreground mb-6">Currently helping with: {subject}</p>
+          
+          <div className="space-y-4">
+            <textarea
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="Type your homework question here..."
+              className="w-full h-32 p-4 rounded-lg border focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            />
+            
+            <div className="flex items-center gap-4">
               <Button
-                onClick={handleSendMessage}
-                disabled={!question.trim() || isLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                className="gap-2"
               >
-                {isLoading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
+                <Upload className="h-4 w-4" />
+                Attach Image
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              {imageFile && <span className="text-sm text-muted-foreground">Image attached</span>}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={clearForm}>
+                Clear
+              </Button>
+              <Button onClick={handleSubmit} disabled={isLoading} className="gap-2">
+                {isLoading ? 'Processing...' : 'Get Help'}
+                <Send className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              Press Ctrl + Enter to send
-            </p>
           </div>
-        </div>
+        </Card>
+
+        {answer && (
+          <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Solution</h2>
+            <div className={`prose dark:prose-invert max-w-none ${isStreaming ? 'animate-pulse' : ''}`}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ className, children, ...props }) {
+                    const match = /language-(\w+)/.exec(className || '')
+                    return match ? (
+                      <SyntaxHighlighter
+                        style={vscDarkPlus as any}
+                        language={match[1]}
+                        PreTag="div"
+                      >
+                        {String(children).replace(/\n$/, '')}
+                      </SyntaxHighlighter>
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    )
+                  }
+                }}
+              >
+                {answer}
+              </ReactMarkdown>
+            </div>
+          </Card>
+        )}
       </div>
     </div>
   )
