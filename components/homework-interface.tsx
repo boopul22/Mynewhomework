@@ -61,12 +61,6 @@ export default function HomeworkInterface() {
       formData.append('image', imageFile)
     }
     
-    // Add history to the form data
-    const history = messages.map(message => ({
-        role: message.role === 'user' ? 'user' : 'model',
-        parts: [{ text: message.content }]
-    }));
-    formData.append('history', JSON.stringify(history));
     formData.append('stream', 'false');
 
     const newMessage: Message = {
@@ -98,20 +92,15 @@ export default function HomeworkInterface() {
         )
       }
 
-      const data = await response.json()
-      console.log("API Data:", data);
-      
-      if (!data || !data.response) {
-        throw new Error('Invalid response format from API')
-      }
+      const responseText = await response.text()
+      console.log("API Response Text:", responseText);
       
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: data.response
+        content: responseText
       }])
     } catch (error: any) {
       console.error('Error:', error)
-      console.error('Full error object:', error)
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: `Sorry, I encountered an error while processing your request: ${error.message || 'Unknown error'}`
@@ -250,32 +239,42 @@ export default function HomeworkInterface() {
                   "p-6 rounded-lg",
                   message.role === 'user' 
                     ? "bg-blue-50/50 dark:bg-blue-950/30" 
-                    : "bg-gray-50/50 dark:bg-gray-900/30"
+                    : "bg-white dark:bg-gray-900/30",
+                  "mb-6 shadow-sm hover:shadow-md transition-all duration-200"
                 )}
               >
                 <div className="flex items-start gap-4">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-8 w-8 flex-shrink-0 mt-1">
                     <AvatarImage 
                       src={message.role === 'user' ? "/placeholder-user.jpg" : "/ai-avatar.png"} 
                       alt={message.role === 'user' ? "User" : "AI"} 
                     />
                     <AvatarFallback>{message.role === 'user' ? 'U' : 'AI'}</AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <div className="flex-1 space-y-2">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      {message.role === 'user' ? 'You' : 'HomeworkHelper'}
+                    </div>
+                    <div className="text-sm prose dark:prose-invert max-w-none whitespace-pre-wrap">
+                      {message.content}
+                    </div>
                   </div>
                 </div>
               </div>
             ))}
             
             {isLoading && (
-              <div className="p-6">
+              <div className="p-6 rounded-lg bg-gray-50/50 dark:bg-gray-900/30">
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-8 w-8 flex-shrink-0">
                     <AvatarImage src="/ai-avatar.png" alt="AI" />
                     <AvatarFallback>AI</AvatarFallback>
                   </Avatar>
-                  <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-gray-900 dark:border-gray-100"></div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 animate-bounce bg-blue-600 rounded-full"></div>
+                    <div className="h-2 w-2 animate-bounce bg-blue-600 rounded-full" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="h-2 w-2 animate-bounce bg-blue-600 rounded-full" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
                 </div>
               </div>
             )}

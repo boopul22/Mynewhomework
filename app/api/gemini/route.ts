@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { startChatSession } from '@/lib/gemini'
+import { teacherModelConfig } from '@/lib/teacher-model-config'
 
 // Ensure the API key is loaded from the environment
 const apiKey = process.env.GEMINI_API_KEY;
@@ -24,22 +25,47 @@ function base64ToUint8Array(base64String: string): Uint8Array {
   return bytes;
 }
 
+// Helper function to clean markdown formatting
+function cleanMarkdown(text: string): string {
+  return text
+    // Remove bold and italic markers
+    .replace(/\*\*([^*]+)\*\*/g, '$1') // Bold with content
+    .replace(/\*([^*]+)\*/g, '$1')     // Italic with content
+    .replace(/\*\*/g, '')              // Any remaining double asterisks
+    .replace(/\*/g, '')                // Any remaining single asterisks
+    // Remove bullet points and indentation
+    .replace(/^[ \t]*[-*+][ \t]+/gm, '')
+    // Remove headers
+    .replace(/^#{1,6}[ \t]+/gm, '')
+    // Remove code blocks
+    .replace(/`{1,3}[^`]*`{1,3}/g, '$1')
+    // Remove underscores
+    .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
+    // Remove any remaining special characters
+    .replace(/[_`~]/g, '')
+    // Fix multiple spaces and lines
+    .replace(/\s+/g, ' ')
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const prompt = formData.get('prompt') as string
     const imageData = formData.get('image') as string | null
-    const history = formData.get('history') as string || '[]'
     const isStreaming = formData.get('stream') === 'true'
 
     if (!prompt) {
-      return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
+      return new NextResponse('Error: Prompt is required', {
+        status: 400,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8'
+        }
+      });
     }
 
-    console.log("Received request with prompt:", prompt, "history:", history, "isStreaming:", isStreaming, "hasImage:", !!imageData);
-
-    // Parse chat history
-    const chatHistory = JSON.parse(history) as { role: 'user' | 'model', parts: { text: string }[] }[]
+    console.log("Received request with prompt:", prompt, "isStreaming:", isStreaming, "hasImage:", !!imageData);
 
     try {
       if (imageData) {
@@ -49,7 +75,7 @@ export async function POST(request: NextRequest) {
         const imageBytes = base64ToUint8Array(imageData);
         
         const result = await model.generateContent([
-          prompt,
+          `${teacherModelConfig.role}\n\nUser Query: ${prompt}`,
           {
             inlineData: {
               mimeType: "image/jpeg",
@@ -59,19 +85,17 @@ export async function POST(request: NextRequest) {
         ]);
         
         const response = await result.response;
-        const responseText = response.text();
+        const responseText = cleanMarkdown(response.text());
         
-        return NextResponse.json({ 
-          response: responseText,
-          history: [...chatHistory, 
-            { role: 'user', parts: [{ text: prompt }] },
-            { role: 'model', parts: [{ text: responseText }] }
-          ]
+        return new NextResponse(responseText, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8'
+          }
         });
       } else {
         // Use regular chat for text-only input
-        console.log('Starting chat session with history:', chatHistory)
-        const chat = await startChatSession(chatHistory);
+        console.log('Starting chat session')
+        const chat = await startChatSession([]);
 
         if (isStreaming) {
           const streamingResponse = await chat.sendMessageStream(prompt);
@@ -83,7 +107,7 @@ export async function POST(request: NextRequest) {
             async start(controller) {
               try {
                 for await (const chunk of streamingResponse.stream) {
-                  const text = chunk.text();
+                  const text = cleanMarkdown(chunk.text());
                   controller.enqueue(encoder.encode(text));
                 }
                 controller.close();
@@ -114,12 +138,10 @@ export async function POST(request: NextRequest) {
             }
 
             console.log('Model response received successfully:', responseText);
-            return NextResponse.json({ 
-              response: responseText,
-              history: [...chatHistory, 
-                { role: 'user', parts: [{ text: prompt }] },
-                { role: 'model', parts: [{ text: responseText }] }
-              ]
+            return new NextResponse(responseText, {
+              headers: {
+                'Content-Type': 'text/plain; charset=utf-8'
+              }
             });
           } catch (error: any) {
             console.error('Error in chat response:', error);
@@ -129,24 +151,20 @@ export async function POST(request: NextRequest) {
       }
     } catch (error: any) {
       console.error('Error calling Gemini API:', error);
-      return NextResponse.json(
-        { 
-          error: 'Failed to get response from Gemini',
-          details: error.message,
-          stack: error.stack
-        },
-        { status: 500 }
-      )
+      return new NextResponse(`Error: ${error.message}`, {
+        status: 500,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8'
+        }
+      });
     }
   } catch (error: any) {
     console.error('API Error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Failed to process the request',
-        details: error.message,
-        stack: error.stack
-      },
-      { status: 500 }
-    )
+    return new NextResponse(`Error: ${error.message}`, {
+      status: 500,
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8'
+      }
+    });
   }
 } 
