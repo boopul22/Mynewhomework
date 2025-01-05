@@ -6,11 +6,26 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { MoreHorizontal, Plus, Settings, Square, Maximize2, Send, Search, Book, Calculator, PenTool, Microscope, History, Brain } from 'lucide-react'
 import { useState, useRef, useEffect } from "react"
 import { cn } from "@/lib/utils"
+import ReactMarkdown from 'react-markdown'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
   timestamp?: Date
+}
+
+const removeAsterisks = (text: string) => {
+  return text.replace(/\*/g, '')
+}
+
+const formatMessage = (content: string) => {
+  // Remove any unnecessary whitespace at the start and end
+  content = content.trim()
+  // Ensure code blocks are properly formatted
+  content = content.replace(/```(\w+)?\n/g, '```$1\n')
+  return content
 }
 
 export default function HomeworkInterface() {
@@ -242,30 +257,52 @@ export default function HomeworkInterface() {
           role="log"
           aria-live="polite"
         >
-          <div className="space-y-6 max-w-3xl mx-auto">
+          <div className="space-y-6 max-w-5xl mx-auto">
             {messages.map((message, index) => (
               <div
                 key={index}
                 className={cn(
-                  "p-4 rounded-lg",
+                  "p-6 rounded-lg",
                   message.role === "user"
-                    ? "bg-white shadow-md ml-auto max-w-[80%] border border-gray-100"
-                    : "bg-blue-50 mr-auto max-w-[80%] border border-blue-100 font-serif"
+                    ? "bg-white shadow-md ml-auto max-w-[95%] border border-gray-100"
+                    : "bg-blue-50 mr-auto max-w-[95%] border border-blue-100 font-serif"
                 )}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-4">
                   {message.role === "assistant" && (
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-10 w-10 flex-shrink-0">
                       <AvatarImage src="/teacher-avatar.png" />
                       <AvatarFallback className="bg-blue-100 text-blue-600">T</AvatarFallback>
                     </Avatar>
                   )}
-                  <div className="flex-1">
-                    <div className="text-sm mb-1 text-gray-500">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base mb-2 text-gray-500">
                       {message.role === "user" ? "You" : "Teacher"}
                     </div>
-                    <div className="text-sm leading-relaxed">
-                      {message.content}
+                    <div className="text-base leading-relaxed prose dark:prose-invert max-w-none">
+                      <ReactMarkdown
+                        components={{
+                          code: (props: any) => {
+                            const {className, children} = props
+                            const match = /language-(\w+)/.exec(className || '')
+                            return match ? (
+                              <SyntaxHighlighter
+                                style={vscDarkPlus}
+                                language={match[1]}
+                                PreTag="div"
+                              >
+                                {String(children).replace(/\n$/, '')}
+                              </SyntaxHighlighter>
+                            ) : (
+                              <code className={cn("bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5", className)}>
+                                {children}
+                              </code>
+                            )
+                          }
+                        }}
+                      >
+                        {formatMessage(message.content)}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 </div>

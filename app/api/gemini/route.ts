@@ -25,30 +25,6 @@ function base64ToUint8Array(base64String: string): Uint8Array {
   return bytes;
 }
 
-// Helper function to clean markdown formatting
-function cleanMarkdown(text: string): string {
-  return text
-    // Remove bold and italic markers
-    .replace(/\*\*([^*]+)\*\*/g, '$1') // Bold with content
-    .replace(/\*([^*]+)\*/g, '$1')     // Italic with content
-    .replace(/\*\*/g, '')              // Any remaining double asterisks
-    .replace(/\*/g, '')                // Any remaining single asterisks
-    // Remove bullet points and indentation
-    .replace(/^[ \t]*[-*+][ \t]+/gm, '')
-    // Remove headers
-    .replace(/^#{1,6}[ \t]+/gm, '')
-    // Remove code blocks
-    .replace(/`{1,3}[^`]*`{1,3}/g, '$1')
-    // Remove underscores
-    .replace(/_{1,2}([^_]+)_{1,2}/g, '$1')
-    // Remove any remaining special characters
-    .replace(/[_`~]/g, '')
-    // Fix multiple spaces and lines
-    .replace(/\s+/g, ' ')
-    .replace(/\n\s*\n/g, '\n')
-    .trim();
-}
-
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
@@ -85,7 +61,7 @@ export async function POST(request: NextRequest) {
         ]);
         
         const response = await result.response;
-        const responseText = cleanMarkdown(response.text());
+        const responseText = response.text();
         
         return new NextResponse(responseText, {
           headers: {
@@ -107,7 +83,7 @@ export async function POST(request: NextRequest) {
             async start(controller) {
               try {
                 for await (const chunk of streamingResponse.stream) {
-                  const text = cleanMarkdown(chunk.text());
+                  const text = chunk.text();
                   controller.enqueue(encoder.encode(text));
                 }
                 controller.close();
@@ -133,11 +109,8 @@ export async function POST(request: NextRequest) {
             }
 
             const responseText = result.response.text();
-            if (typeof responseText !== 'string') {
-              throw new Error('Invalid response format: response text is not a string');
-            }
-
             console.log('Model response received successfully:', responseText);
+            
             return new NextResponse(responseText, {
               headers: {
                 'Content-Type': 'text/plain; charset=utf-8'
