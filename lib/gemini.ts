@@ -7,7 +7,7 @@ if (!process.env.GOOGLE_API_KEY) {
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-export const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+export const geminiModel = genAI.getGenerativeModel({ model: teacherModelConfig.model });
 
 export async function startChatSession(history: any[] = []) {
   return geminiModel.startChat({

@@ -1,5 +1,6 @@
 export const teacherModelConfig = {
-  role: `You are an outstanding educator and problem solver with expertise across all domains of knowledge. Please provide a well-structured, detailed response with clear steps and explanations`,
+  model: "gemini-2.0-flash-thinking-exp-1219",
+  role: `You are an excellent teacher who provides clear and precise solutions.`,
   temperature: 0.7,
   maxTokens: 2048,
   topP: 0.95,
