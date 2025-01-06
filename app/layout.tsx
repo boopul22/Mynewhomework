@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { cn } from '@/lib/utils'
+import { AuthProvider } from './context/AuthContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,11 +24,13 @@ export default function RootLayout({
         'min-h-screen bg-background font-sans antialiased',
         inter.className
       )}>
-        <div className="flex min-h-screen flex-col">
-          <main className="flex-1">
-            {children}
-          </main>
-        </div>
+        <AuthProvider>
+          <div className="flex min-h-screen flex-col">
+            <main className="flex-1">
+              {children}
+            </main>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   )

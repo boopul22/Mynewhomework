@@ -3,23 +3,29 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Settings, Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon } from 'lucide-react'
+import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import remarkGfm from 'remark-gfm'
 import HistorySlider from './history-slider'
+import ProfileButton from '@/app/components/ProfileButton'
+import { useChatHistory } from '@/lib/chat-history'
+import { useAuth } from '@/app/context/AuthContext'
 
 export default function HomeworkInterface() {
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const chatEndRef = useRef<HTMLDivElement>(null)
   const [question, setQuestion] = useState("")
-  const [subject, setSubject] = useState<string>("Mathematics")
   const [answer, setAnswer] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [imageFile, setImageFile] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const answerContainerRef = useRef<HTMLDivElement>(null)
+  const { addMessage, loadMessages, messages } = useChatHistory()
+  const { user } = useAuth()
 
   const subjects = [
     { icon: Calculator, label: 'Mathematics' },
@@ -80,12 +86,25 @@ export default function HomeworkInterface() {
     }
   }, [answer, isStreaming, scrollToBottom]);
 
+  useEffect(() => {
+    if (user) {
+      console.log('User authenticated, loading messages...');
+      loadMessages().then(() => {
+        console.log('Messages loaded successfully');
+      }).catch(error => {
+        console.error('Error loading messages:', error);
+      });
+    } else {
+      console.log('No authenticated user');
+    }
+  }, [user, loadMessages]);
+
   const handleSubmit = async () => {
     if (!question.trim()) return
 
     const formData = new FormData()
     formData.append('prompt', question)
-    formData.append('userId', 'user-' + Math.random().toString(36).substr(2, 9))
+    formData.append('userId', user ? user.uid : 'anonymous')
     if (imageFile) {
       formData.append('image', imageFile)
     }
@@ -109,14 +128,21 @@ export default function HomeworkInterface() {
       if (!reader) throw new Error('No reader available')
 
       const decoder = new TextDecoder()
+      let fullResponse = ''
+
       while (true) {
-        const { done, value } = await reader.read()
+        const { value, done } = await reader.read()
         if (done) break
 
         const text = decoder.decode(value)
+        fullResponse += text
         setAnswer(prev => prev + text)
         setTimeout(scrollToBottom, 0)
       }
+
+      // Add to chat history after getting full response
+      await addMessage(question, fullResponse)
+      
     } catch (error: any) {
       setAnswer(`Sorry, I encountered an error: ${error.message || 'Unknown error'}`)
     } finally {
@@ -135,15 +161,20 @@ export default function HomeworkInterface() {
     }
   }
 
+  const handleSelectChat = useCallback((selectedQuestion: string, selectedAnswer: string) => {
+    setQuestion(selectedQuestion)
+    setAnswer(selectedAnswer)
+    setTimeout(scrollToBottom, 100)
+  }, [])
+
   return (
     <>
-      <HistorySlider />
+      <HistorySlider onSelectChat={handleSelectChat} />
       <div className="fixed inset-0 flex flex-col bg-gradient-to-br from-[#F8F1F8] via-[#FFF4F9] to-[#F8F1F8]">
         {/* Header */}
-        <div className="flex items-center justify-end px-4 py-3">
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-[#4D4352] hover:bg-[#F8F1F8]/50 rounded-full">
-            <Settings className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex-1" /> {/* Spacer */}
+          <ProfileButton />
         </div>
 
         {/* Main Content */}

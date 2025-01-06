@@ -4,17 +4,35 @@ import { useState } from 'react'
 import { Button } from './ui/button'
 import { MessageSquare, Brain, History } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useChatHistory } from '@/lib/chat-history'
+import { format } from 'date-fns'
+import { useAuth } from '@/app/context/AuthContext'
 
 interface HistoryItem {
   id: string
   title: string
   timestamp: Date
+  question: string
+  answer: string
   category?: 'today' | 'yesterday' | 'previous7Days' | 'previous30Days'
 }
 
-export default function HistorySlider() {
+interface HistorySliderProps {
+  onSelectChat: (question: string, answer: string) => void
+}
+
+export default function HistorySlider({ onSelectChat }: HistorySliderProps) {
   const [isOpen, setIsOpen] = useState(true)
-  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([])
+  const { messages, isLoading, error } = useChatHistory()
+  const { user } = useAuth()
+
+  const historyItems: HistoryItem[] = messages.map(msg => ({
+    id: msg.id,
+    title: msg.question.slice(0, 50) + (msg.question.length > 50 ? '...' : ''),
+    timestamp: msg.timestamp,
+    question: msg.question,
+    answer: msg.answer
+  }))
 
   const groupedHistory = historyItems.reduce((acc, item) => {
     const now = new Date()
@@ -47,38 +65,59 @@ export default function HistorySlider() {
     >
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="p-4 space-y-4">
+        <div className="p-4">
           <div className="flex items-center gap-2">
             <div className="h-7 w-7 rounded-lg bg-[#4D4352] flex items-center justify-center">
-              <MessageSquare className="h-4 w-4 text-white" />
+              <History className="h-4 w-4 text-white" />
             </div>
-            <span className="font-medium text-sm">ChatGPT</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-[#4D4352] flex items-center justify-center">
-              <Brain className="h-4 w-4 text-white" />
-            </div>
-            <span className="font-medium text-sm">Prompt Engineer</span>
+            <span className="font-medium text-sm">Chat History</span>
           </div>
         </div>
 
         {/* History Sections */}
         <div className="flex-1 overflow-y-auto px-2 py-4 space-y-6">
-          {Object.entries(groupedHistory).map(([category, items]) => (
-            <div key={category} className="space-y-2">
-              <h3 className="text-sm font-medium px-2 text-[#6B6B6B] capitalize">
-                {category.replace(/([A-Z])/g, ' $1').trim()}
-              </h3>
-              {items.map((item) => (
-                <button
-                  key={item.id}
-                  className="w-full text-left px-2 py-2 rounded hover:bg-[#F8F1F8]/50 transition-colors text-sm"
-                >
-                  {item.title}
-                </button>
-              ))}
+          {!user ? (
+            <div className="text-center text-sm text-[#6B6B6B] pt-4">
+              Please sign in to view chat history
             </div>
-          ))}
+          ) : isLoading ? (
+            <div className="flex flex-col items-center justify-center gap-3 pt-4">
+              <div className="h-5 w-5 border-2 border-[#4D4352] border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm text-[#6B6B6B] text-center px-4">
+                {error || 'Loading chat history...'}
+              </p>
+            </div>
+          ) : error && !isLoading ? (
+            <div className="text-center text-sm text-red-500 pt-4 px-4">
+              {error}
+            </div>
+          ) : Object.entries(groupedHistory).length > 0 ? (
+            Object.entries(groupedHistory).map(([category, items]) => (
+              <div key={category} className="space-y-2">
+                <h3 className="text-sm font-medium px-2 text-[#6B6B6B] capitalize">
+                  {category.replace(/([A-Z])/g, ' $1').trim()}
+                </h3>
+                {items.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => onSelectChat(item.question, item.answer)}
+                    className="w-full text-left px-2 py-2 rounded hover:bg-[#F8F1F8]/50 transition-colors"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      <p className="text-xs text-[#6B6B6B]">
+                        {format(item.timestamp, 'h:mm a')}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-sm text-[#6B6B6B] pt-4">
+              No chat history yet
+            </div>
+          )}
         </div>
 
         {/* Toggle Button */}
