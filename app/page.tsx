@@ -12,9 +12,14 @@ const HomeworkInterface = dynamic(() => import("@/components/homework-interface"
   ),
 })
 
+const Calculator = dynamic(() => import("@/components/Calculator"), {
+  ssr: false,
+})
+
 export default function Home() {
   return (
     <div className="flex min-h-[calc(100vh-2rem)] flex-col space-y-6 py-6">
+      <Calculator />
       <div className="flex flex-1 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
         <Suspense
           fallback={

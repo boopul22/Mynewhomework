@@ -197,21 +197,15 @@ export default function HomeworkInterface() {
   // Update the type of onSelectChat prop in HistorySlider component
   interface HistorySliderProps {
     onSelectChat: (question: string, answer: string, chatId: string) => void;
+    startNewChat: () => void;
   }
 
   return (
     <>
-      <HistorySlider onSelectChat={handleSelectChat} />
+      <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} />
       <div className="fixed inset-0 flex flex-col bg-gradient-to-br from-[#F8F1F8] via-[#FFF4F9] to-[#F8F1F8]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3">
-          <Button
-            onClick={startNewChat}
-            className="flex items-center gap-2 bg-[#4D4352]/5 hover:bg-[#4D4352]/10 text-[#4D4352] px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Aske one more
-          </Button>
           <div className="flex-1" /> {/* Spacer */}
           <ProfileButton />
         </div>
