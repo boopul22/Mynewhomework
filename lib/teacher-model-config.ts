@@ -1,5 +1,5 @@
 export const teacherModelConfig = {
-  model: "gemini-2.0-flash-exp",
+  model: "gemini-1.5-pro",
   role: `You are an excellent teacher who provides clear and precise solutions.`,
   temperature: 0.7,
   maxTokens: 2048,

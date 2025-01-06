@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     try {
       if (imageData) {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
         
         const imageBytes = base64ToUint8Array(imageData);
         
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         await recordUsage({
           userId,
           ...usage,
-          model: "gemini-2.0-flash-exp"
+          model: "gemini-1.5-pro"
         });
         
         return new NextResponse(responseText, {
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
                 await recordUsage({
                   userId,
                   ...usage,
-                  model: "gemini-2.0-flash-exp"
+                  model: "gemini-1.5-pro"
                 });
                 
                 controller.close();
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
             await recordUsage({
               userId,
               ...usage,
-              model: "gemini-2.0-flash-exp"
+              model: "gemini-1.5-pro"
             });
 
             console.log('Model response received successfully:', responseText);
