@@ -209,44 +209,56 @@ export default function HomeworkInterface() {
       </div>
 
       {/* Input Area */}
-      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-[#F8F1F8] via-[#F8F1F8] to-transparent pt-6">
-        <div className="max-w-2xl mx-auto px-4 pb-4">
-          <div className="flex items-center gap-2 bg-white rounded-2xl shadow-sm border border-[#E8E8E8] p-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => fileInputRef.current?.click()}
-              className="h-8 w-8 shrink-0 rounded-full text-[#6B6B6B] hover:bg-[#F8F1F8]"
-            >
-              <ImageIcon className="h-4 w-4" />
-            </Button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageUpload}
-              accept="image/*"
-              className="hidden"
-            />
-            <textarea
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onPaste={handlePaste}
-              placeholder="Ask SayHalo anything..."
-              className="flex-1 resize-none bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-[#6B6B6B] text-[#4D4352] text-sm py-1.5 min-h-[20px] max-h-[120px] overflow-y-auto"
-              rows={1}
-            />
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading || !question.trim()}
-              size="icon"
-              className="h-8 w-8 shrink-0 rounded-full bg-[#E8927C] hover:bg-[#E88070] disabled:opacity-50 disabled:hover:bg-[#E8927C]"
-            >
-              {isLoading ? (
-                <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-            </Button>
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl">
+        <div className="relative">
+          <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-[#F8F1F8] to-transparent pointer-events-none"></div>
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-[#E8E8E8] dark:border-gray-800 p-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-8 w-8 shrink-0 rounded-full text-[#6B6B6B] hover:bg-[#F8F1F8] transition-all duration-200"
+              >
+                <ImageIcon className="h-4 w-4" />
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              <textarea
+                value={question}
+                onChange={(e) => {
+                  setQuestion(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                }}
+                onPaste={handlePaste}
+                placeholder="Ask your question here..."
+                className="flex-1 resize-none bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-[#6B6B6B] text-[#4D4352] text-sm py-1.5 min-h-[36px] max-h-[120px] overflow-y-auto transition-all duration-200"
+                style={{ height: '36px' }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSubmit();
+                  }
+                }}
+              />
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading || !question.trim()}
+                className="h-8 w-8 shrink-0 rounded-full bg-[#E8927C] hover:bg-[#E88070] disabled:opacity-50 disabled:hover:bg-[#E8927C] transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                {isLoading ? (
+                  <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5 text-white" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
