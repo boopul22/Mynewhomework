@@ -237,7 +237,7 @@ export default function HomeworkInterface() {
           {answer && (
             <div 
               ref={answerContainerRef} 
-              className="absolute inset-0 overflow-y-auto overscroll-y-contain px-4 pb-32"
+              className="absolute inset-0 overflow-y-auto overscroll-y-contain px-4 pb-32 max-h-[calc(100vh-8rem)]"
             >
               <div className={`space-y-4 max-w-2xl mx-auto pt-6 ${isStreaming ? 'animate-pulse' : ''}`}>
                 <div className="flex items-start gap-3">
