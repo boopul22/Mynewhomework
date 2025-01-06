@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon } from 'lucide-react'
+import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -24,8 +24,9 @@ export default function HomeworkInterface() {
   const [isStreaming, setIsStreaming] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const answerContainerRef = useRef<HTMLDivElement>(null)
-  const { addMessage, loadMessages, messages } = useChatHistory()
+  const { addMessage, loadMessages, messages, createNewChat } = useChatHistory()
   const { user } = useAuth()
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
 
   const subjects = [
     { icon: Calculator, label: 'Mathematics' },
@@ -91,13 +92,21 @@ export default function HomeworkInterface() {
       console.log('User authenticated, loading messages...');
       loadMessages().then(() => {
         console.log('Messages loaded successfully');
+        // Create a new chat session if there isn't one
+        if (!currentChatId) {
+          setCurrentChatId(createNewChat());
+        }
       }).catch(error => {
         console.error('Error loading messages:', error);
       });
     } else {
       console.log('No authenticated user');
+      // Create a new chat session for anonymous users
+      if (!currentChatId) {
+        setCurrentChatId(createNewChat());
+      }
     }
-  }, [user, loadMessages]);
+  }, [user, loadMessages, currentChatId, createNewChat]);
 
   const handleSubmit = async () => {
     if (!question.trim()) return
@@ -141,7 +150,13 @@ export default function HomeworkInterface() {
       }
 
       // Add to chat history after getting full response
-      await addMessage(question, fullResponse)
+      if (currentChatId) {
+        await addMessage(question, fullResponse, currentChatId)
+      } else {
+        const newChatId = createNewChat()
+        setCurrentChatId(newChatId)
+        await addMessage(question, fullResponse, newChatId)
+      }
       
     } catch (error: any) {
       setAnswer(`Sorry, I encountered an error: ${error.message || 'Unknown error'}`)
@@ -161,11 +176,28 @@ export default function HomeworkInterface() {
     }
   }
 
-  const handleSelectChat = useCallback((selectedQuestion: string, selectedAnswer: string) => {
+  const handleSelectChat = useCallback((selectedQuestion: string, selectedAnswer: string, chatId: string) => {
     setQuestion(selectedQuestion)
     setAnswer(selectedAnswer)
+    setCurrentChatId(chatId)
     setTimeout(scrollToBottom, 100)
   }, [])
+
+  const startNewChat = () => {
+    setQuestion("")
+    setAnswer("")
+    setImageFile(null)
+    const newChatId = createNewChat()
+    setCurrentChatId(newChatId)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  // Update the type of onSelectChat prop in HistorySlider component
+  interface HistorySliderProps {
+    onSelectChat: (question: string, answer: string, chatId: string) => void;
+  }
 
   return (
     <>
@@ -173,6 +205,13 @@ export default function HomeworkInterface() {
       <div className="fixed inset-0 flex flex-col bg-gradient-to-br from-[#F8F1F8] via-[#FFF4F9] to-[#F8F1F8]">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3">
+          <Button
+            onClick={startNewChat}
+            className="flex items-center gap-2 bg-[#4D4352]/5 hover:bg-[#4D4352]/10 text-[#4D4352] px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Aske one more
+          </Button>
           <div className="flex-1" /> {/* Spacer */}
           <ProfileButton />
         </div>

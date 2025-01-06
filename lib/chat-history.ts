@@ -8,23 +8,30 @@ interface ChatMessage {
   answer: string
   timestamp: Date
   userId: string
+  chatId: string
 }
 
 interface ChatHistoryState {
   messages: ChatMessage[]
   isLoading: boolean
   error: string | null
-  addMessage: (question: string, answer: string) => Promise<void>
+  addMessage: (question: string, answer: string, chatId?: string) => Promise<void>
   loadMessages: () => Promise<void>
   clearHistory: () => Promise<void>
+  createNewChat: () => string
 }
 
-export const useChatHistory = create<ChatHistoryState>((set) => ({
+export const useChatHistory = create<ChatHistoryState>((set, get) => ({
   messages: [],
   isLoading: false,
   error: null,
   
-  addMessage: async (question: string, answer: string) => {
+  createNewChat: () => {
+    const chatId = Math.random().toString(36).substring(7);
+    return chatId;
+  },
+
+  addMessage: async (question: string, answer: string, chatId?: string) => {
     const user = auth.currentUser;
     console.log('Current user:', user?.uid);
     
@@ -37,7 +44,8 @@ export const useChatHistory = create<ChatHistoryState>((set) => ({
             question,
             answer,
             timestamp: new Date(),
-            userId: 'anonymous'
+            userId: 'anonymous',
+            chatId: chatId || Math.random().toString(36).substring(7)
           },
           ...state.messages,
         ],
@@ -53,6 +61,7 @@ export const useChatHistory = create<ChatHistoryState>((set) => ({
         question,
         answer,
         timestamp: serverTimestamp(),
+        chatId: chatId || Math.random().toString(36).substring(7)
       };
       
       const docRef = await addDoc(collection(db, 'chat_history'), messageData);
@@ -68,7 +77,8 @@ export const useChatHistory = create<ChatHistoryState>((set) => ({
               question,
               answer,
               timestamp: new Date(),
-              userId: user.uid
+              userId: user.uid,
+              chatId: messageData.chatId
             },
             ...state.messages,
           ],
@@ -84,7 +94,8 @@ export const useChatHistory = create<ChatHistoryState>((set) => ({
             question,
             answer,
             timestamp: new Date(),
-            userId: user.uid
+            userId: user.uid,
+            chatId: chatId || Math.random().toString(36).substring(7)
           },
           ...state.messages,
         ],
@@ -124,7 +135,8 @@ export const useChatHistory = create<ChatHistoryState>((set) => ({
               question: data.question,
               answer: data.answer,
               timestamp: data.timestamp?.toDate() || new Date(),
-              userId: data.userId
+              userId: data.userId,
+              chatId: data.chatId
             };
           });
 
@@ -133,7 +145,6 @@ export const useChatHistory = create<ChatHistoryState>((set) => ({
         }, 
         (error) => {
           console.error('Error in Firestore listener:', error);
-          // Check if the error is due to missing index
           if (error.message.includes('requires an index')) {
             set({ 
               error: 'Chat history is being prepared. This may take a few minutes...',

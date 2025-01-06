@@ -23,34 +23,111 @@ export default function ChatInterface() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const [question, setQuestion] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const [currentChat, setCurrentChat] = useState<string[]>([])
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
   const { messages, addMessage, clearHistory } = useChatHistory()
+  const MAX_CHARS = 1000
+  const [isFocused, setIsFocused] = useState(false)
 
+  // Debounce the textarea height adjustment
+  const debouncedAdjustHeight = useRef<NodeJS.Timeout>()
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!question.trim()) return
+    if (!question.trim() || isLoading) return
+    if (question.length > MAX_CHARS) return
 
-    // Here you would typically send the question to your AI backend
-    // For now, let's just add a mock response
-    const mockResponse = "This is a mock response to your question. In a real application, this would be the AI's response."
+    setIsLoading(true)
+    try {
+      // Store the question for potential retry
+      const currentQuestion = question.trim()
+      
+      // Clear input early for better UX
+      setQuestion("")
+      adjustTextareaHeight()
+
+      // Here you would typically send the question to your AI backend
+      const mockResponse = "This is a mock response to your question. In a real application, this would be the AI's response."
+      
+      // Add the question and answer to history
+      addMessage(currentQuestion, mockResponse)
+      
+      // Add to current chat
+      setCurrentChat(prev => [...prev, currentQuestion, mockResponse])
+
+      // Scroll to bottom with a small delay to ensure content is rendered
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    } catch (error) {
+      console.error('Error submitting question:', error)
+      // Restore the question if submission failed
+      setQuestion(question)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Submit on Cmd/Ctrl + Enter
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault()
+      handleSubmit(e as any)
+      return
+    }
     
-    // Add the question and answer to history
-    addMessage(question, mockResponse)
-    
-    // Add to current chat
-    setCurrentChat(prev => [...prev, question, mockResponse])
-    
-    // Clear the input
-    setQuestion("")
-    
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"
+    // Handle Tab key for better accessibility
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      const start = e.currentTarget.selectionStart
+      const end = e.currentTarget.selectionEnd
+      setQuestion(prev => 
+        prev.substring(0, start) + '    ' + prev.substring(end)
+      )
+      // Set cursor position after the inserted tab
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 4
+        }
+      }, 0)
+    }
+  }
+
+  const adjustTextareaHeight = () => {
+    // Clear any pending adjustment
+    if (debouncedAdjustHeight.current) {
+      clearTimeout(debouncedAdjustHeight.current)
     }
 
-    // Scroll to bottom
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Debounce the height adjustment
+    debouncedAdjustHeight.current = setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "56px"
+        const scrollHeight = textareaRef.current.scrollHeight
+        textareaRef.current.style.height = `${Math.min(scrollHeight, 200)}px`
+      }
+    }, 10)
+  }
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault()
+    const text = e.clipboardData.getData('text')
+    // Clean and normalize pasted text
+    const cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+    
+    const start = e.currentTarget.selectionStart
+    const end = e.currentTarget.selectionEnd
+    const beforeText = question.substring(0, start)
+    const afterText = question.substring(end)
+    
+    const newValue = beforeText + cleanText + afterText
+    // Only update if within character limit
+    if (newValue.length <= MAX_CHARS) {
+      setQuestion(newValue)
+      // Adjust height after paste
+      setTimeout(adjustTextareaHeight, 0)
+    }
   }
 
   const startNewChat = () => {
@@ -69,13 +146,6 @@ export default function ChatInterface() {
       setSelectedChatId(chatId)
       setCurrentChat([chat.question, chat.answer])
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }
-  }
-
-  const adjustTextareaHeight = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto"
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
     }
   }
 
@@ -245,63 +315,63 @@ export default function ChatInterface() {
 
         {/* Question Input */}
         <div className="p-6 border-t bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-          <div className="flex items-center gap-2 mb-4 pb-4 border-b">
-            <Button variant="ghost" size="sm" className="gap-2 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-              <Plus className="h-4 w-4" />
-              Upload File
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-              <PenTool className="h-4 w-4" />
-              Draw
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-              <Calculator className="h-4 w-4" />
-              Formula
-            </Button>
-          </div>
-          <form onSubmit={handleSubmit} className="flex gap-4">
+          <form onSubmit={handleSubmit} className="relative">
             <textarea
               ref={textareaRef}
-              placeholder="Type your homework question here..."
-              className={cn(
-                "flex-1 resize-none outline-none text-sm bg-transparent",
-                "min-h-[40px] max-h-[200px] py-2",
-                "placeholder:text-muted-foreground"
-              )}
-              rows={1}
               value={question}
               onChange={(e) => {
-                setQuestion(e.target.value)
-                adjustTextareaHeight()
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmit(e)
+                const newValue = e.target.value
+                if (newValue.length <= MAX_CHARS) {
+                  setQuestion(newValue)
+                  adjustTextareaHeight()
                 }
               }}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Ask your question here... (Cmd/Ctrl + Enter to submit)"
+              aria-label="Question input"
+              className={cn(
+                "w-full min-h-[56px] max-h-[200px] p-4 pr-24 rounded-xl",
+                "border bg-white dark:bg-gray-800",
+                "focus:outline-none focus:ring-2 focus:ring-blue-600/20",
+                "transition-all resize-none",
+                "placeholder:text-gray-400 dark:placeholder:text-gray-500",
+                isFocused ? "border-blue-600/20" : "border-gray-200 dark:border-gray-700",
+                isLoading && "opacity-70"
+              )}
+              disabled={isLoading}
             />
-            <Button 
-              type="submit"
-              disabled={!question.trim()}
-              className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 text-white h-10 px-4 rounded-xl shadow-lg shadow-blue-600/20 transition-all duration-200"
-              size="icon"
-            >
-              <Send className="h-4 w-4" />
-              <span className="sr-only">Send question</span>
-            </Button>
+            <div className="absolute right-4 bottom-4 flex items-center gap-3">
+              <span className={cn(
+                "text-xs transition-colors",
+                question.length > MAX_CHARS ? "text-red-500" : 
+                question.length > MAX_CHARS * 0.9 ? "text-yellow-500" : 
+                "text-muted-foreground"
+              )}>
+                {question.length}/{MAX_CHARS}
+              </span>
+              <Button 
+                type="submit" 
+                size="icon"
+                disabled={isLoading || !question.trim() || question.length > MAX_CHARS}
+                className={cn(
+                  "h-8 w-8 rounded-lg transition-all",
+                  isLoading ? "opacity-50 cursor-not-allowed" : 
+                  question.trim() && question.length <= MAX_CHARS 
+                    ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                )}
+                aria-label="Send message"
+              >
+                <Send className={cn(
+                  "h-4 w-4 transition-all",
+                  isLoading ? "animate-pulse" : ""
+                )} />
+              </Button>
+            </div>
           </form>
-          <div className="flex items-center gap-2 mt-4">
-            <Button variant="ghost" size="sm" className="gap-2 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-              📚 Subject Guides
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-              📝 Practice Problems
-            </Button>
-            <Button variant="ghost" size="sm" className="gap-2 h-9 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
-              🎯 Study Tools
-            </Button>
-          </div>
         </div>
       </div>
     </div>
