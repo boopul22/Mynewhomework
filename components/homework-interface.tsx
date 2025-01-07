@@ -277,7 +277,7 @@ export default function HomeworkInterface() {
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl">
           <div className="relative">
             <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-[#F8F1F8] to-transparent pointer-events-none"></div>
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-[#E8E8E8] dark:border-gray-800 p-2">
+            <div className="bg-background rounded-xl shadow-lg border border-border p-2">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"

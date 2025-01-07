@@ -34,26 +34,19 @@ export default function Calculator() {
   return (
     <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10">
       {isExpanded ? (
-        <div className="w-48 rounded-2xl bg-pink-50/95 p-3 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-102 dark:bg-gray-800/95 border border-pink-100 dark:border-gray-700">
-          <div className="mb-2 rounded-xl bg-white/80 p-1.5 dark:bg-gray-700/80">
-            <div className="flex items-center justify-between">
-              <div className="flex space-x-1">
-                <div className="h-2 w-2 rounded-full bg-pink-400"></div>
-                <div className="h-2 w-2 rounded-full bg-yellow-400"></div>
-                <div className="h-2 w-2 rounded-full bg-green-400"></div>
-              </div>
-              <button 
-                onClick={toggleCalculator}
-                className="text-[10px] text-pink-400 dark:text-pink-300 hover:text-pink-600 dark:hover:text-pink-400"
-              >
-                ✨ calc ▼
-              </button>
-            </div>
+        <div className="w-48 rounded-2xl bg-background p-3 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-102 border border-border">
+          <div className="mb-2 rounded-xl bg-background/80 p-1.5">
+            <button
+              onClick={toggleCalculator}
+              className="text-[10px] text-primary hover:text-primary/80"
+            >
+              {isExpanded ? "Close" : "Open"} Calculator
+            </button>
           </div>
-          
-          <div className="mb-2 h-12 overflow-hidden rounded-lg bg-white/80 p-1.5 dark:bg-gray-900/80">
-            <div className="text-right text-xs text-gray-600 dark:text-gray-400">{calculation || '0'}</div>
-            <div className="text-right text-lg font-bold text-pink-600 dark:text-pink-300">{result || '0'}</div>
+
+          <div className="mb-2 h-12 overflow-hidden rounded-lg bg-background/80 p-1.5">
+            <div className="text-right text-xs text-muted-foreground">{calculation || '0'}</div>
+            <div className="text-right text-lg font-bold text-primary">{result || '0'}</div>
           </div>
 
           <div className="grid grid-cols-4 gap-1">
@@ -61,12 +54,22 @@ export default function Calculator() {
               <button
                 key={btn}
                 onClick={() => handleButtonClick(btn === '÷' ? '/' : btn === '×' ? '*' : btn)}
-                className="rounded-lg bg-white/80 p-1.5 text-center text-sm hover:bg-pink-100 active:bg-pink-200 dark:bg-gray-700/80 dark:hover:bg-gray-600 dark:active:bg-gray-500"
+                className="rounded-lg bg-background/80 p-1.5 text-center text-sm hover:bg-muted active:bg-muted/80"
               >
                 {btn}
               </button>
             ))}
           </div>
+
+          <button
+            onClick={toggleCalculator}
+            className="rounded-full bg-background p-2 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 border border-border"
+          >
+            <div className="flex items-center space-x-1 text-primary">
+              <Calculator className="h-4 w-4" />
+              <span className="text-xs">Calculator</span>
+            </div>
+          </button>
         </div>
       ) : (
         <button

@@ -171,7 +171,7 @@ export default function ChatInterface() {
   return (
     <div className="flex h-[calc(100vh-2rem)]">
       {/* Sidebar */}
-      <div className="w-72 flex-shrink-0 bg-white/95 dark:bg-gray-900/95 border-r backdrop-blur-sm transition-all duration-200 ease-in-out">
+      <div className="w-72 flex-shrink-0 bg-background border-r backdrop-blur-sm transition-all duration-200 ease-in-out">
         <div className="flex flex-col h-full p-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
@@ -181,13 +181,13 @@ export default function ChatInterface() {
               </div>
               <span className="font-semibold text-lg">HomeworkHelper</span>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted transition-colors">
               <Settings className="h-4 w-4" />
             </Button>
           </div>
 
           {/* User Profile */}
-          <div className="flex items-center gap-3 mb-6 p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 cursor-pointer">
+          <div className="flex items-center gap-3 mb-6 p-3 rounded-xl hover:bg-muted transition-all duration-200 cursor-pointer">
             <Avatar className="h-10 w-10 ring-2 ring-offset-2 ring-blue-600/20">
               <AvatarImage src="/placeholder-user.jpg" alt="Student" />
               <AvatarFallback>ST</AvatarFallback>
@@ -204,29 +204,29 @@ export default function ChatInterface() {
             <input
               type="text"
               placeholder="Search your questions..."
-              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-gray-100/80 dark:bg-gray-800/80 focus:outline-none focus:ring-2 focus:ring-blue-600/20 transition-all"
+              className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-muted focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
 
           {/* Subjects Navigation */}
           <nav className="space-y-1.5 mb-6">
-            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-muted transition-colors">
               <Calculator className="h-4 w-4 text-blue-600" />
               <span>Mathematics</span>
             </Button>
-            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-muted transition-colors">
               <Book className="h-4 w-4 text-green-600" />
               <span>English</span>
             </Button>
-            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-muted transition-colors">
               <Microscope className="h-4 w-4 text-purple-600" />
               <span>Science</span>
             </Button>
-            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-muted transition-colors">
               <History className="h-4 w-4 text-orange-600" />
               <span>History</span>
             </Button>
-            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+            <Button variant="ghost" className="w-full justify-start gap-3 h-11 rounded-xl hover:bg-muted transition-colors">
               <Brain className="h-4 w-4 text-pink-600" />
               <span>Study Tips</span>
             </Button>
@@ -244,17 +244,17 @@ export default function ChatInterface() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/50">
-        <header className="flex items-center justify-between px-6 py-4 border-b bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm">
+      <div className="flex-1 flex flex-col bg-background">
+        <header className="flex items-center justify-between px-6 py-4 border-b bg-background backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <h1 className="text-lg font-semibold">Homework Helper</h1>
-            <div className="text-xs px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium">Smart Tutor</div>
+            <div className="text-xs px-2.5 py-1 rounded-full bg-primary/10 text-primary font-medium">Smart Tutor</div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted">
               <PenTool className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800">
+            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted">
               <Calculator className="h-4 w-4" />
             </Button>
           </div>
@@ -271,31 +271,31 @@ export default function ChatInterface() {
                 </p>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                   <li className="flex items-center gap-2 text-sm">
-                    <div className="h-8 w-8 rounded-lg bg-blue-100/50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                    <div className="h-8 w-8 rounded-lg bg-blue-100/50 flex items-center justify-center text-blue-600">
                       <Calculator className="h-4 w-4" />
                     </div>
                     Solving math problems step by step
                   </li>
                   <li className="flex items-center gap-2 text-sm">
-                    <div className="h-8 w-8 rounded-lg bg-green-100/50 dark:bg-green-900/30 flex items-center justify-center text-green-600">
+                    <div className="h-8 w-8 rounded-lg bg-green-100/50 flex items-center justify-center text-green-600">
                       <PenTool className="h-4 w-4" />
                     </div>
                     Writing and editing essays
                   </li>
                   <li className="flex items-center gap-2 text-sm">
-                    <div className="h-8 w-8 rounded-lg bg-purple-100/50 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
+                    <div className="h-8 w-8 rounded-lg bg-purple-100/50 flex items-center justify-center text-purple-600">
                       <Microscope className="h-4 w-4" />
                     </div>
                     Understanding scientific concepts
                   </li>
                   <li className="flex items-center gap-2 text-sm">
-                    <div className="h-8 w-8 rounded-lg bg-orange-100/50 dark:bg-orange-900/30 flex items-center justify-center text-orange-600">
+                    <div className="h-8 w-8 rounded-lg bg-orange-100/50 flex items-center justify-center text-orange-600">
                       <History className="h-4 w-4" />
                     </div>
                     Historical analysis and research
                   </li>
                   <li className="flex items-center gap-2 text-sm">
-                    <div className="h-8 w-8 rounded-lg bg-pink-100/50 dark:bg-pink-900/30 flex items-center justify-center text-pink-600">
+                    <div className="h-8 w-8 rounded-lg bg-pink-100/50 flex items-center justify-center text-pink-600">
                       <Brain className="h-4 w-4" />
                     </div>
                     Study techniques and organization
@@ -309,8 +309,8 @@ export default function ChatInterface() {
                   className={cn(
                     "p-4 rounded-lg",
                     index % 2 === 0 
-                      ? "bg-blue-50/50 dark:bg-blue-900/20" // User message
-                      : "bg-gray-50/50 dark:bg-gray-900/20" // AI response
+                      ? "bg-blue-50/50" // User message
+                      : "bg-muted/50" // AI response
                   )}
                 >
                   <div className="flex items-start gap-4">
@@ -333,7 +333,7 @@ export default function ChatInterface() {
         </div>
 
         {/* Question Input */}
-        <div className="p-6 border-t bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
+        <div className="p-6 border-t bg-background/50 backdrop-blur-sm">
           <form onSubmit={handleSubmit} className="relative">
             <textarea
               ref={textareaRef}
@@ -353,7 +353,7 @@ export default function ChatInterface() {
               aria-label="Question input"
               className={cn(
                 "w-full min-h-[56px] max-h-[200px] p-4 pr-24 rounded-xl",
-                "border bg-white dark:bg-gray-800",
+                "border bg-background",
                 "placeholder:text-sm placeholder:text-gray-400 placeholder:align-middle",
                 imagePreview ? "pb-28" : ""
               )}
@@ -361,11 +361,11 @@ export default function ChatInterface() {
             />
             {imagePreview && (
               <div className="absolute left-4 bottom-4 flex items-center gap-2">
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-border">
                   <img src={imagePreview} alt="Pasted" className="w-full h-full object-cover" />
                   <button
                     onClick={clearImagePreview}
-                    className="absolute top-1 right-1 p-1 rounded-full bg-gray-900/50 hover:bg-gray-900/70 text-white transition-colors"
+                    className="absolute top-1 right-1 p-1 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground transition-colors"
                   >
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M18 6L6 18M6 6l12 12" />
@@ -400,9 +400,9 @@ export default function ChatInterface() {
                 }}
                 className={cn(
                   "h-8 w-8 rounded-lg transition-all duration-200",
-                  "bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700",
-                  "border border-gray-200 dark:border-gray-700",
-                  "text-gray-600 dark:text-gray-300"
+                  "bg-muted hover:bg-muted/80",
+                  "border border-border",
+                  "text-muted-foreground"
                 )}
                 aria-label="Paste from clipboard"
               >
@@ -428,7 +428,7 @@ export default function ChatInterface() {
                   isLoading ? "opacity-50 cursor-not-allowed" : 
                   question.trim() && question.length <= MAX_CHARS 
                     ? "bg-blue-600 hover:bg-blue-700 text-white" 
-                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                    : "hover:bg-muted hover:bg-muted/80"
                 )}
                 aria-label="Send message"
               >
