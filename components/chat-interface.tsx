@@ -29,6 +29,7 @@ export default function ChatInterface() {
   const { messages, addMessage, clearHistory } = useChatHistory()
   const MAX_CHARS = 1000
   const [isFocused, setIsFocused] = useState(false)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   // Debounce the textarea height adjustment
   const debouncedAdjustHeight = useRef<NodeJS.Timeout>()
@@ -110,24 +111,42 @@ export default function ChatInterface() {
     }, 10)
   }
 
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+  const handlePaste = async (e: React.ClipboardEvent) => {
     e.preventDefault()
-    const text = e.clipboardData.getData('text')
-    // Clean and normalize pasted text
-    const cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
-    
-    const start = e.currentTarget.selectionStart
-    const end = e.currentTarget.selectionEnd
-    const beforeText = question.substring(0, start)
-    const afterText = question.substring(end)
-    
-    const newValue = beforeText + cleanText + afterText
-    // Only update if within character limit
-    if (newValue.length <= MAX_CHARS) {
-      setQuestion(newValue)
-      // Adjust height after paste
-      setTimeout(adjustTextareaHeight, 0)
+    const items = e.clipboardData?.items
+    let hasHandledItem = false
+
+    if (items) {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i]
+        
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile()
+          if (file) {
+            const reader = new FileReader()
+            reader.onloadend = () => {
+              setImagePreview(reader.result as string)
+            }
+            reader.readAsDataURL(file)
+            hasHandledItem = true
+            break
+          }
+        }
+      }
+
+      // If no image was found, try to get text
+      if (!hasHandledItem) {
+        const text = e.clipboardData.getData('text')
+        if (text && text.length + question.length <= MAX_CHARS) {
+          setQuestion(prev => prev + text)
+          adjustTextareaHeight()
+        }
+      }
     }
+  }
+
+  const clearImagePreview = () => {
+    setImagePreview(null)
   }
 
   const startNewChat = () => {
@@ -335,14 +354,26 @@ export default function ChatInterface() {
               className={cn(
                 "w-full min-h-[56px] max-h-[200px] p-4 pr-24 rounded-xl",
                 "border bg-white dark:bg-gray-800",
-                "focus:outline-none focus:ring-2 focus:ring-blue-600/20",
-                "transition-all resize-none",
-                "placeholder:text-gray-400 dark:placeholder:text-gray-500",
-                isFocused ? "border-blue-600/20" : "border-gray-200 dark:border-gray-700",
-                isLoading && "opacity-70"
+                "placeholder:text-sm placeholder:text-gray-400 placeholder:align-middle",
+                imagePreview ? "pb-28" : ""
               )}
               disabled={isLoading}
             />
+            {imagePreview && (
+              <div className="absolute left-4 bottom-4 flex items-center gap-2">
+                <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                  <img src={imagePreview} alt="Pasted" className="w-full h-full object-cover" />
+                  <button
+                    onClick={clearImagePreview}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-gray-900/50 hover:bg-gray-900/70 text-white transition-colors"
+                  >
+                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
             <div className="absolute right-4 bottom-4 flex items-center gap-3">
               <span className={cn(
                 "text-xs transition-colors",
@@ -352,6 +383,42 @@ export default function ChatInterface() {
               )}>
                 {question.length}/{MAX_CHARS}
               </span>
+              <Button 
+                type="button"
+                size="icon"
+                onClick={async () => {
+                  try {
+                    // Try to get clipboard content
+                    const clipboardContent = await navigator.clipboard.readText();
+                    if (clipboardContent && clipboardContent.length + question.length <= MAX_CHARS) {
+                      setQuestion(prev => prev + clipboardContent);
+                      adjustTextareaHeight();
+                    }
+                  } catch (err) {
+                    console.error('Failed to read clipboard:', err);
+                  }
+                }}
+                className={cn(
+                  "h-8 w-8 rounded-lg transition-all duration-200",
+                  "bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700",
+                  "border border-gray-200 dark:border-gray-700",
+                  "text-gray-600 dark:text-gray-300"
+                )}
+                aria-label="Paste from clipboard"
+              >
+                <svg 
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2"
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                >
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                  <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                </svg>
+              </Button>
               <Button 
                 type="submit" 
                 size="icon"

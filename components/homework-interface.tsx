@@ -27,6 +27,7 @@ export default function HomeworkInterface() {
   const { addMessage, loadMessages, messages, createNewChat } = useChatHistory()
   const { user } = useAuth()
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
 
   const subjects = [
     { icon: Calculator, label: 'Mathematics' },
@@ -48,8 +49,9 @@ export default function HomeworkInterface() {
     }
   }
 
-  const handlePaste = (event: React.ClipboardEvent) => {
+  const handlePaste = async (event: React.ClipboardEvent) => {
     const items = event.clipboardData?.items;
+    let hasHandledItem = false;
     
     if (items) {
       for (let i = 0; i < items.length; i++) {
@@ -58,14 +60,31 @@ export default function HomeworkInterface() {
           if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-              const base64String = reader.result as string;
-              setImageFile(base64String);
+              setImagePreview(reader.result as string);
             };
             reader.readAsDataURL(file);
+            hasHandledItem = true;
+            break;
+          }
+        }
+      }
+
+      // If no image was found, try to get text
+      if (!hasHandledItem) {
+        const text = event.clipboardData.getData('text');
+        if (text) {
+          setQuestion(prev => prev + text);
+          if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
           }
         }
       }
     }
+  };
+
+  const clearImagePreview = () => {
+    setImagePreview(null);
   };
 
   const scrollToBottom = useCallback(() => {
@@ -214,16 +233,8 @@ export default function HomeworkInterface() {
         <div className="flex-1 relative overflow-hidden">
           {/* Welcome Message */}
           {!answer && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center max-w-[280px] -translate-y-[10vh]">
-                <div className="space-y-1.5">
-                  <h1 className="text-[15px] font-medium text-[#4D4352]">Hi there</h1>
-                  <p className="text-sm text-[#4D4352]">Can I help you with anything?</p>
-                  <p className="text-xs text-[#6B6B6B]">
-                    Ready to assist with your questions
-                  </p>
-                </div>
-              </div>
+            <div className="w-full pt-16 flex justify-center">
+              <h1 className="text-2xl font-bold text-[#4D4352]">Ask Your Questions</h1>
             </div>
           )}
 
@@ -290,6 +301,52 @@ export default function HomeworkInterface() {
                   accept="image/*"
                   className="hidden"
                 />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={async () => {
+                    try {
+                      // Try to get clipboard content
+                      const clipboardContent = await navigator.clipboard.readText();
+                      if (clipboardContent) {
+                        setQuestion(prev => prev + clipboardContent);
+                        if (textareaRef.current) {
+                          textareaRef.current.style.height = 'auto';
+                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+                        }
+                      }
+                    } catch (err) {
+                      console.error('Failed to read clipboard:', err);
+                    }
+                  }}
+                  className="h-8 w-8 shrink-0 rounded-full bg-[#F8F1F8] hover:bg-[#F0E5F0] text-[#6B6B6B] transition-all duration-200"
+                >
+                  <svg 
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2"
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  >
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                  </svg>
+                </Button>
+                {imagePreview && (
+                  <div className="relative h-8 w-8 rounded-lg overflow-hidden border border-[#E8E8E8]">
+                    <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
+                    <button
+                      onClick={clearImagePreview}
+                      className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-gray-900/50 hover:bg-gray-900/70 text-white transition-colors"
+                    >
+                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
                 <textarea
                   value={question}
                   onChange={(e) => {
@@ -299,7 +356,7 @@ export default function HomeworkInterface() {
                   }}
                   onPaste={handlePaste}
                   placeholder="Ask your question here..."
-                  className="flex-1 resize-none bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-[#6B6B6B] text-[#4D4352] text-sm py-1.5 min-h-[36px] max-h-[120px] overflow-y-auto transition-all duration-200"
+                  className="flex-1 resize-none bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-sm placeholder:text-[#6B6B6B] placeholder:align-middle text-[#4D4352] text-sm py-1.5 min-h-[36px] max-h-[120px] overflow-y-auto transition-all duration-200"
                   style={{ height: '36px' }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
