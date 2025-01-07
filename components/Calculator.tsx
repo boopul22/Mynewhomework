@@ -66,7 +66,9 @@ export default function Calculator() {
             className="rounded-full bg-background p-2 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-110 border border-border"
           >
             <div className="flex items-center space-x-1 text-primary">
-              <Calculator className="h-4 w-4" />
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm0 2h12v12H4V4zm2 2v2h8V6H6zm0 4v2h3v-2H6zm5 0v2h3v-2h-3zm-5 4v2h3v-2H6zm5 0v2h3v-2h-3z"/>
+              </svg>
               <span className="text-xs">Calculator</span>
             </div>
           </button>

@@ -76,18 +76,18 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
   return (
     <div
       className={cn(
-        "fixed left-0 top-0 h-full w-72 bg-gradient-to-br from-[#F8F1F8] via-[#FFF4F9] to-[#F8F1F8] text-[#4D4352] transition-transform duration-300 ease-in-out z-50 shadow-lg",
+        "fixed left-0 top-0 h-full w-72 bg-background dark:bg-gradient-to-b dark:from-[#0F0F18] dark:to-[#121220] text-foreground transition-all duration-300 ease-in-out z-50 shadow-lg border-r border-border",
         !isOpen && "-translate-x-full"
       )}
     >
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full backdrop-blur-xl">
         {/* Header */}
-        <div className="p-7 border-b border-[#4D4352]/10">
-          <h1 className="text-2xl font-bold text-[#4D4352]">
+        <div className="p-7 border-b border-border">
+          <h1 className="text-2xl font-bold text-foreground">
             {user ? (user.displayName || user.email?.split('@')[0] || 'User') : 'Guest'}
           </h1>
-          <div className="flex items-center gap-3 mt-3 text-[#6B6B6B]">
-            <div className="h-8 w-8 rounded-full bg-[#E8927C] flex items-center justify-center shadow-sm">
+          <div className="flex items-center gap-3 mt-3 text-muted-foreground">
+            <div className="h-8 w-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
               {user?.photoURL ? (
                 <img 
                   src={user.photoURL} 
@@ -95,14 +95,14 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
                   className="h-8 w-8 rounded-full object-cover"
                 />
               ) : (
-                <BookOpen className="h-4 w-4 text-white" />
+                <BookOpen className="h-4 w-4 text-primary-foreground" />
               )}
             </div>
             <span className="font-medium">Student</span>
           </div>
           <Button
             onClick={startNewChat}
-            className="flex items-center justify-center gap-2 bg-[#4D4352]/5 hover:bg-[#4D4352]/10 text-[#4D4352] px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-6 shadow-sm hover:shadow"
+            className="flex items-center justify-center gap-2 bg-secondary/80 hover:bg-secondary text-secondary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-6 shadow-sm hover:shadow backdrop-blur-sm"
           >
             <Plus className="h-4 w-4" />
             Ask one more
@@ -118,9 +118,9 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
                 <button
                   key={index}
                   onClick={() => handleNavigation(item.href)}
-                  className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-[#4D4352]/5 transition-colors font-medium"
+                  className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium"
                 >
-                  <span className="text-[#E8927C]">{item.icon}</span>
+                  <span className="text-primary/90">{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
               ))}
@@ -128,79 +128,45 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
           </div>
 
           {/* Career Goals Section */}
-          <div className="py-5 border-t border-[#4D4352]/10">
-            <h2 className="px-7 text-[15px] font-semibold text-[#4D4352] mb-3">Career goals</h2>
+          <div className="py-5 border-t border-border">
+            <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Career goals</h2>
             <div className="space-y-1.5 px-4">
               {careerItems.map((item, index) => (
                 <button
                   key={index}
-                  className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-[#4D4352]/5 transition-colors font-medium"
+                  className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium"
                 >
-                  <span className="text-[#E8927C]">{item.icon}</span>
+                  <span className="text-primary/90">{item.icon}</span>
                   <span>{item.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Chat History Section */}
-          <div className="py-5 border-t border-[#4D4352]/10">
-            <h2 className="px-7 text-[15px] font-semibold text-[#4D4352] mb-3">
-              <div className="flex items-center gap-3">
-                <Clock className="h-4 w-4 text-[#E8927C]" />
-                <span>Chat History</span>
-              </div>
-            </h2>
-            <div className="space-y-5 px-4">
-              {!user ? (
-                <div className="text-center text-[15px] text-[#6B6B6B] px-4 py-3 bg-[#4D4352]/5 rounded-xl">
-                  Please sign in to view history
-                </div>
-              ) : isLoading ? (
-                <div className="flex justify-center py-6">
-                  <div className="h-6 w-6 border-2 border-[#E8927C] border-t-transparent rounded-full animate-spin" />
-                </div>
-              ) : error ? (
-                <div className="text-center text-[15px] text-red-500 px-4 py-3 bg-red-50 rounded-xl">
-                  {error}
-                </div>
-              ) : Object.entries(groupedMessages).length > 0 ? (
-                Object.entries(groupedMessages).map(([category, msgs]) => (
-                  <div key={category} className="space-y-2">
-                    <h3 className="text-[13px] font-semibold text-[#4D4352]/70 px-4">
-                      {category}
-                    </h3>
-                    {msgs.map((msg) => (
-                      <button
-                        key={msg.id}
-                        onClick={() => onSelectChat(msg.question, msg.answer, msg.chatId)}
-                        className="w-full text-left px-4 py-3 rounded-xl hover:bg-[#4D4352]/5 transition-colors"
-                      >
-                        <div className="space-y-2">
-                          <p className="text-[15px] font-medium line-clamp-2 leading-snug">
-                            {msg.question}
-                          </p>
-                          <p className="text-[13px] text-[#6B6B6B]">
-                            {format(new Date(msg.timestamp), 'h:mm a')}
-                          </p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                ))
-              ) : (
-                <div className="text-center text-[15px] text-[#6B6B6B] px-4 py-3 bg-[#4D4352]/5 rounded-xl">
-                  No chat history yet
-                </div>
-              )}
+          {/* Chat History */}
+          <div className="py-5 border-t border-border">
+            <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Chat History</h2>
+            <div className="space-y-1.5 px-4">
+              {messages.map((chat, index) => (
+                <button
+                  key={index}
+                  onClick={() => onSelectChat(chat.question, chat.answer, chat.chatId)}
+                  className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium"
+                >
+                  <span className="text-primary/90">
+                    <MessageSquare className="h-4 w-4" />
+                  </span>
+                  <span className="truncate">{chat.question}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
         {/* Logout Button */}
-        <div className="p-4 border-t border-[#4D4352]/10 mt-auto">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-[15px] rounded-xl hover:bg-[#4D4352]/5 transition-colors font-medium">
-            <LogOut className="h-4 w-4 text-[#E8927C]" />
+        <div className="p-4 border-t border-border mt-auto">
+          <button className="w-full flex items-center gap-3 px-4 py-3 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium">
+            <LogOut className="h-4 w-4 text-destructive" />
             <span>Logout</span>
           </button>
         </div>
@@ -209,7 +175,7 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
         <Button
           variant="ghost"
           size="icon"
-          className="absolute -right-12 top-1/2 -translate-y-1/2 bg-[#E8927C] text-white hover:bg-[#E88070] rounded-l-none h-12 w-12 shadow-lg"
+          className="absolute -right-12 top-1/2 -translate-y-1/2 bg-primary/90 text-primary-foreground hover:bg-primary rounded-l-none h-12 w-12 shadow-lg"
           onClick={() => setIsOpen(!isOpen)}
         >
           <History className="h-5 w-5" />

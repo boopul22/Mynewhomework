@@ -13,6 +13,7 @@ import HistorySlider from './history-slider'
 import ProfileButton from '@/app/components/ProfileButton'
 import { useChatHistory } from '@/lib/chat-history'
 import { useAuth } from '@/app/context/AuthContext'
+import { Header } from '@/components/ui/header'
 
 export default function HomeworkInterface() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -222,12 +223,9 @@ export default function HomeworkInterface() {
   return (
     <>
       <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} />
-      <div className="fixed inset-0 flex flex-col bg-gradient-to-br from-[#F8F1F8] via-[#FFF4F9] to-[#F8F1F8]">
+      <div className="fixed inset-0 flex flex-col bg-background dark:bg-gradient-to-br dark:from-[#0F0F18] dark:via-[#121220] dark:to-[#0F0F18] transition-colors duration-300">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex-1" /> {/* Spacer */}
-          <ProfileButton />
-        </div>
+        <Header />
 
         {/* Main Content */}
         <div className="flex-1 relative overflow-hidden">
@@ -239,10 +237,10 @@ export default function HomeworkInterface() {
             >
               <div className={`space-y-4 max-w-2xl mx-auto pt-6 ${isStreaming ? 'animate-pulse' : ''}`}>
                 <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 shrink-0 rounded-full bg-[#4D4352] flex items-center justify-center">
-                    <span className="text-white text-sm">AI</span>
+                  <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center">
+                    <span className="text-primary-foreground text-sm">AI</span>
                   </div>
-                  <div className="flex-1 prose max-w-none text-[#4D4352] text-sm">
+                  <div className="flex-1 prose dark:prose-invert max-w-none text-foreground text-sm">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{
@@ -252,12 +250,12 @@ export default function HomeworkInterface() {
                             <SyntaxHighlighter
                               language={match[1]}
                               style={vscDarkPlus as any}
-                              className="rounded-xl border border-[#E8E8E8] !bg-[#FAFAFA] !mt-3 !mb-3 text-xs"
+                              className="rounded-xl border border-border !bg-secondary/50 !mt-3 !mb-3 text-xs dark:!bg-secondary/30"
                             >
                               {String(children).replace(/\n$/, '')}
                             </SyntaxHighlighter>
                           ) : (
-                            <code className="bg-[#F8F1F8] text-[#4D4352] rounded-lg px-1.5 py-0.5 text-xs" {...props}>
+                            <code className="bg-secondary/50 dark:bg-secondary/30 text-foreground rounded-lg px-1.5 py-0.5 text-xs" {...props}>
                               {children}
                             </code>
                           )
@@ -276,14 +274,14 @@ export default function HomeworkInterface() {
         {/* Input Area */}
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl">
           <div className="relative">
-            <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-[#F8F1F8] to-transparent pointer-events-none"></div>
-            <div className="bg-background rounded-xl shadow-lg border border-border p-2">
+            <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background dark:from-[#0F0F18] to-transparent pointer-events-none"></div>
+            <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-lg border border-border p-2">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => fileInputRef.current?.click()}
-                  className="h-8 w-8 shrink-0 rounded-full text-[#6B6B6B] hover:bg-[#F8F1F8] transition-all duration-200"
+                  className="h-8 w-8 shrink-0 rounded-full hover:bg-secondary transition-all duration-200"
                 >
                   <ImageIcon className="h-4 w-4" />
                 </Button>
@@ -299,7 +297,6 @@ export default function HomeworkInterface() {
                   size="icon"
                   onClick={async () => {
                     try {
-                      // Try to get clipboard content
                       const clipboardContent = await navigator.clipboard.readText();
                       if (clipboardContent) {
                         setQuestion(prev => prev + clipboardContent);
@@ -312,7 +309,7 @@ export default function HomeworkInterface() {
                       console.error('Failed to read clipboard:', err);
                     }
                   }}
-                  className="h-8 w-8 shrink-0 rounded-full bg-[#F8F1F8] hover:bg-[#F0E5F0] text-[#6B6B6B] transition-all duration-200"
+                  className="h-8 w-8 shrink-0 rounded-full bg-secondary hover:bg-secondary/80 transition-all duration-200"
                 >
                   <svg 
                     className="h-4 w-4"
@@ -328,11 +325,11 @@ export default function HomeworkInterface() {
                   </svg>
                 </Button>
                 {imagePreview && (
-                  <div className="relative h-8 w-8 rounded-lg overflow-hidden border border-[#E8E8E8]">
+                  <div className="relative h-8 w-8 rounded-lg overflow-hidden border border-border">
                     <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
                     <button
                       onClick={clearImagePreview}
-                      className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-gray-900/50 hover:bg-gray-900/70 text-white transition-colors"
+                      className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-background/50 hover:bg-background/70 text-foreground transition-colors"
                     >
                       <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M18 6L6 18M6 6l12 12" />
@@ -349,7 +346,7 @@ export default function HomeworkInterface() {
                   }}
                   onPaste={handlePaste}
                   placeholder="Ask your question here..."
-                  className="flex-1 resize-none bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-sm placeholder:text-[#6B6B6B] placeholder:align-middle text-[#4D4352] text-sm py-1.5 min-h-[36px] max-h-[120px] overflow-y-auto transition-all duration-200"
+                  className="flex-1 resize-none bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground text-sm py-1.5 min-h-[36px] max-h-[120px] overflow-y-auto transition-all duration-200"
                   style={{ height: '36px' }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -361,12 +358,12 @@ export default function HomeworkInterface() {
                 <Button
                   onClick={handleSubmit}
                   disabled={isLoading || !question.trim()}
-                  className="h-8 w-8 shrink-0 rounded-full bg-[#E8927C] hover:bg-[#E88070] disabled:opacity-50 disabled:hover:bg-[#E8927C] transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="h-8 w-8 shrink-0 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   {isLoading ? (
-                    <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="h-3 w-3 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <Send className="h-3.5 w-3.5 text-white" />
+                    <Send className="h-3.5 w-3.5 text-primary-foreground" />
                   )}
                 </Button>
               </div>

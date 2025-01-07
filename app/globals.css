@@ -5,29 +5,29 @@
 @layer base {
   :root {
     /* Base colors */
-    --background: 0 0% 100%;
-    --foreground: 240 10% 20%;
+    --background: 0 0% 96%;
+    --foreground: 0 0% 20%;
 
     /* Card and UI elements */
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 20%;
+    --card-foreground: 0 0% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 20%;
+    --popover-foreground: 0 0% 20%;
 
     /* Primary colors */
-    --primary: 224 76% 48%;
+    --primary: 0 0% 77%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary colors */
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 240 10% 20%;
+    --secondary: 0 0% 70%;
+    --secondary-foreground: 0 0% 100%;
 
     /* Muted elements */
-    --muted: 220 14% 96%;
-    --muted-foreground: 240 10% 40%;
+    --muted: 0 0% 88%;
+    --muted-foreground: 0 0% 70%;
 
     /* Accent colors */
-    --accent: 224 76% 48%;
+    --accent: 0 0% 77%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive colors */
@@ -35,9 +35,9 @@
     --destructive-foreground: 0 0% 100%;
 
     /* Borders and inputs */
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 224 76% 48%;
+    --border: 0 0% 88%;
+    --input: 0 0% 88%;
+    --ring: 0 0% 77%;
 
     /* Success colors */
     --success: 142 72% 29%;
@@ -58,6 +58,55 @@
     --radius-xl: 1rem;
     --radius-full: 9999px;
   }
+
+  .dark {
+    /* Base colors */
+    --background: 222 47% 11%;   /* Dark navy background #0f172a */
+    --foreground: 214 32% 91%;   /* Light grey text #E5E7EB */
+
+    /* Card and UI elements */
+    --card: 222 47% 13%;         /* Slightly lighter navy for cards */
+    --card-foreground: 214 32% 91%;
+    --popover: 222 47% 13%;
+    --popover-foreground: 214 32% 91%;
+
+    /* Primary colors */
+    --primary: 217 33% 17%;      /* Darker navy for primary elements */
+    --primary-foreground: 214 32% 91%;
+
+    /* Secondary colors */
+    --secondary: 222 47% 15%;    /* Mid-tone navy */
+    --secondary-foreground: 214 32% 91%;
+
+    /* Muted elements */
+    --muted: 215 25% 27%;        /* Subtle background for muted elements */
+    --muted-foreground: 215 20% 65%;   /* Muted text */
+
+    /* Accent colors */
+    --accent: 217 33% 17%;       /* Same as primary */
+    --accent-foreground: 214 32% 91%;
+
+    /* Destructive colors */
+    --destructive: 0 65% 45%;    /* Darker red */
+    --destructive-foreground: 214 32% 91%;
+
+    /* Borders and inputs */
+    --border: 216 34% 17%;       /* Subtle borders */
+    --input: 216 34% 17%;
+    --ring: 224 76% 48%;         /* Bright blue for focus rings */
+
+    /* Success colors */
+    --success: 142 60% 25%;
+    --success-foreground: 214 32% 91%;
+
+    /* Warning colors */
+    --warning: 38 75% 45%;
+    --warning-foreground: 214 32% 91%;
+
+    /* Info colors */
+    --info: 199 75% 40%;
+    --info-foreground: 214 32% 91%;
+  }
 }
 
 @layer base {
@@ -67,6 +116,42 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+}
+
+/* Adaptive icon styles for both modes */
+svg,
+.icon {
+  @apply text-gray-600 fill-current transition-colors duration-200;
+}
+
+[data-icon],
+.upload-icon,
+.action-icon {
+  @apply text-gray-600 transition-colors duration-200;
+}
+
+/* Dark mode icon styles */
+.dark svg,
+.dark .icon {
+  @apply text-gray-200 fill-current;
+}
+
+/* Ensure specific icons remain white in dark mode */
+.dark [data-icon],
+.dark .upload-icon,
+.dark .action-icon {
+  @apply text-gray-200;
+}
+
+/* Interactive icon states */
+.icon-button:hover svg,
+.icon-button:hover .icon {
+  @apply text-gray-900 dark:text-white;
+}
+
+.icon-button:active svg,
+.icon-button:active .icon {
+  @apply opacity-80;
 }
 
 .rdp {

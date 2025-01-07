@@ -35,6 +35,7 @@ export interface Assignment {
   progress: number;
   subject: string;
   priority?: 'high' | 'medium' | 'low';
+  status: 'completed' | 'in-progress' | 'not-started';
 }
 
 export interface Event {
