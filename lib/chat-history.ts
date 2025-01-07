@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { db, auth } from '@/app/firebase/config'
-import { collection, addDoc, query, orderBy, getDocs, where, serverTimestamp, onSnapshot } from 'firebase/firestore'
+import { collection, addDoc, query, orderBy, getDocs, where, serverTimestamp, onSnapshot, limit } from 'firebase/firestore'
 
 interface ChatMessage {
   id: string
@@ -121,46 +121,26 @@ export const useChatHistory = create<ChatHistoryState>((set, get) => ({
       const q = query(
         collection(db, 'chat_history'),
         where('userId', '==', user.uid),
-        orderBy('timestamp', 'desc')
+        orderBy('timestamp', 'desc'),
+        limit(20)
       );
 
-      // Set up real-time listener
-      const unsubscribe = onSnapshot(q, 
-        (snapshot) => {
-          console.log('Received Firestore update, documents count:', snapshot.size);
-          const messages = snapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              question: data.question,
-              answer: data.answer,
-              timestamp: data.timestamp?.toDate() || new Date(),
-              userId: data.userId,
-              chatId: data.chatId
-            };
-          });
+      const snapshot = await getDocs(q);
+      console.log('Received Firestore documents count:', snapshot.size);
+      const messages = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          question: data.question,
+          answer: data.answer,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          userId: data.userId,
+          chatId: data.chatId
+        };
+      });
 
-          console.log('Processed messages:', messages.length);
-          set({ messages, isLoading: false, error: null });
-        }, 
-        (error) => {
-          console.error('Error in Firestore listener:', error);
-          if (error.message.includes('requires an index')) {
-            set({ 
-              error: 'Chat history is being prepared. This may take a few minutes...',
-              isLoading: true 
-            });
-          } else {
-            set({ 
-              error: `Error loading chat history: ${error.message}`,
-              isLoading: false 
-            });
-          }
-        }
-      );
-
-      // Clean up listener when component unmounts
-      window.addEventListener('beforeunload', unsubscribe);
+      console.log('Processed messages:', messages.length);
+      set({ messages, isLoading: false, error: null });
       
     } catch (error: any) {
       console.error('Error loading messages from Firestore:', error);

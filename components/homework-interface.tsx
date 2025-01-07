@@ -137,11 +137,16 @@ export default function HomeworkInterface() {
     if (imageFile) {
       formData.append('image', imageFile)
     }
-    formData.append('stream', 'true')
 
+    // Clear previous state and prepare UI
     setIsLoading(true)
     setIsStreaming(true)
     setAnswer("")
+    const currentQuestion = question // Store question before clearing
+    setQuestion("")
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '36px'
+    }
 
     try {
       const response = await fetch('/api/gemini', {
@@ -159,23 +164,24 @@ export default function HomeworkInterface() {
       const decoder = new TextDecoder()
       let fullResponse = ''
 
+      // Process the stream
       while (true) {
         const { value, done } = await reader.read()
         if (done) break
 
-        const text = decoder.decode(value)
-        fullResponse += text
-        setAnswer(prev => prev + text)
-        setTimeout(scrollToBottom, 0)
+        const chunk = decoder.decode(value, { stream: true })
+        fullResponse += chunk
+        setAnswer(prev => prev + chunk)
+        scrollToBottom()
       }
 
       // Add to chat history after getting full response
       if (currentChatId) {
-        await addMessage(question, fullResponse, currentChatId)
+        await addMessage(currentQuestion, fullResponse, currentChatId)
       } else {
         const newChatId = createNewChat()
         setCurrentChatId(newChatId)
-        await addMessage(question, fullResponse, newChatId)
+        await addMessage(currentQuestion, fullResponse, newChatId)
       }
       
     } catch (error: any) {
@@ -183,7 +189,7 @@ export default function HomeworkInterface() {
     } finally {
       setIsLoading(false)
       setIsStreaming(false)
-      setTimeout(scrollToBottom, 100)
+      scrollToBottom()
     }
   }
 
@@ -235,12 +241,19 @@ export default function HomeworkInterface() {
               ref={answerContainerRef} 
               className="absolute inset-0 overflow-y-auto overscroll-y-contain px-4 pb-32 max-h-[calc(100vh-8rem)]"
             >
-              <div className={`space-y-4 max-w-2xl mx-auto pt-6 ${isStreaming ? 'animate-pulse' : ''}`}>
+              <div className="space-y-4 max-w-2xl mx-auto pt-6">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center">
                     <span className="text-primary-foreground text-sm">AI</span>
                   </div>
                   <div className="flex-1 prose dark:prose-invert max-w-none text-foreground text-sm">
+                    {isStreaming && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    )}
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
                       components={{

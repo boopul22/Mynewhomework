@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI, Part } from '@google/generative-ai'
-import { startChatSession } from '@/lib/gemini'
-import { teacherModelConfig } from '@/lib/teacher-model-config'
 
-// Retrieve the Gemini API key from environment variables for secure access
 const apiKey = process.env.GEMINI_API_KEY;
 
-// Validate that the API key is present, throwing an error if it's missing
 if (!apiKey) {
   console.error("Missing GEMINI_API_KEY environment variable");
   throw new Error("Missing GEMINI_API_KEY environment variable");
 }
 
-// Initialize the Google Generative AI client with the API key
 const genAI = new GoogleGenerativeAI(apiKey);
 
-// Convert base64 encoded image data to a Uint8Array for processing
 function base64ToUint8Array(base64String: string): Uint8Array {
   const base64WithoutPrefix = base64String.split(',')[1] || base64String;
   const binaryString = Buffer.from(base64WithoutPrefix, 'base64').toString('binary');
@@ -27,19 +21,28 @@ function base64ToUint8Array(base64String: string): Uint8Array {
 }
 
 export async function POST(request: NextRequest) {
+  const encoder = new TextEncoder();
+  
   try {
     const formData = await request.formData();
     const prompt = formData.get('prompt') as string;
     const userId = formData.get('userId') as string;
     const image = formData.get('image') as string | null;
-    const stream = formData.get('stream') === 'true';
 
     if (!prompt) {
       throw new Error('No prompt provided');
     }
 
-    // Start a new chat session
-    const chat = await startChatSession();
+    // Get the chat model
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Create a chat session
+    const chat = model.startChat({
+      generationConfig: {
+        maxOutputTokens: 8000,
+        temperature: 0.7,
+      },
+    });
 
     // Prepare message parts
     const messageParts: Part[] = [{ text: prompt }];
@@ -49,19 +52,45 @@ export async function POST(request: NextRequest) {
       messageParts.push({
         inlineData: {
           data: image,
-          mimeType: 'image/jpeg' // Adjust based on your image type
+          mimeType: 'image/jpeg'
         }
       });
     }
 
-    // Get the response from the model
-    const result = await chat.sendMessage(messageParts);
-    const response = await result.response;
-    const text = response.text();
+    // Create transform stream to handle the response
+    const stream = new TransformStream({
+      async transform(chunk, controller) {
+        controller.enqueue(encoder.encode(chunk));
+      },
+    });
 
-    return new NextResponse(text, {
+    // Start processing in the background
+    (async () => {
+      const writer = stream.writable.getWriter();
+      try {
+        const response = await chat.sendMessage(messageParts);
+        const result = await response.response;
+        const text = result.text();
+        
+        // Stream the text word by word with minimal delay
+        const words = text.split(/(\s+)/);
+        for (const word of words) {
+          await writer.write(word);
+          // Reduced delay for faster output
+          await new Promise(resolve => setTimeout(resolve, 5));
+        }
+      } catch (error) {
+        console.error('Streaming error:', error);
+      } finally {
+        await writer.close();
+      }
+    })();
+
+    return new Response(stream.readable, {
       headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
     });
   } catch (error) {
