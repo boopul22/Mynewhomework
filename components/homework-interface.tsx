@@ -236,7 +236,7 @@ export default function HomeworkInterface() {
         {/* Main Content */}
         <div className="flex-1 relative overflow-hidden">
           {/* Answer Area */}
-          {answer && (
+          {(answer || isLoading) && (
             <div 
               ref={answerContainerRef} 
               className="absolute inset-0 overflow-y-auto overscroll-y-contain px-4 pb-32 max-h-[calc(100vh-8rem)]"
@@ -247,7 +247,17 @@ export default function HomeworkInterface() {
                     <span className="text-primary-foreground text-sm">AI</span>
                   </div>
                   <div className="flex-1 prose dark:prose-invert max-w-none text-foreground text-sm">
-                    {isStreaming && (
+                    {isLoading && !answer && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span>Thinking...</span>
+                      </div>
+                    )}
+                    {isStreaming && answer && (
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                         <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                         <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -354,13 +364,23 @@ export default function HomeworkInterface() {
                   value={question}
                   onChange={(e) => {
                     setQuestion(e.target.value);
-                    e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                    if (e.target.value.includes('\n')) {
+                      e.target.style.height = 'auto';
+                      e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                    }
                   }}
                   onPaste={handlePaste}
-                  placeholder="Ask your question here..."
-                  className="flex-1 resize-none bg-transparent border-none focus:outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground text-sm py-1.5 min-h-[36px] max-h-[120px] overflow-y-auto transition-all duration-200"
-                  style={{ height: '36px' }}
+                  placeholder="Ask me anything about your homework"
+                  className="flex w-full resize-none bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ 
+                    minHeight: '36px', 
+                    maxHeight: '120px',
+                    height: '36px',
+                    lineHeight: '36px',
+                    paddingTop: '0px',
+                    paddingBottom: '0px'
+                  }}
+                  ref={textareaRef}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
