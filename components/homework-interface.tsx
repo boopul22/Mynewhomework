@@ -231,13 +231,6 @@ export default function HomeworkInterface() {
 
         {/* Main Content */}
         <div className="flex-1 relative overflow-hidden">
-          {/* Welcome Message */}
-          {!answer && (
-            <div className="w-full pt-16 flex justify-center">
-              <h1 className="text-2xl font-bold text-[#4D4352]">Ask Your Questions</h1>
-            </div>
-          )}
-
           {/* Answer Area */}
           {answer && (
             <div 

@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
+import { WelcomePopup } from '@/components/welcome-popup'
 
 const HomeworkInterface = dynamic(() => import("@/components/homework-interface"), {
   ssr: false,
@@ -19,6 +20,7 @@ const Calculator = dynamic(() => import("@/components/Calculator"), {
 export default function Home() {
   return (
     <div className="flex min-h-[calc(100vh-2rem)] flex-col space-y-6 py-6">
+      <WelcomePopup />
       <Calculator />
       <div className="flex flex-1 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
         <Suspense
