@@ -15,19 +15,19 @@
     --popover-foreground: 0 0% 20%;
 
     /* Primary colors */
-    --primary: 0 0% 77%;
+    --primary: 224 76% 48%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary colors */
-    --secondary: 0 0% 70%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 0 0% 20%;
 
     /* Muted elements */
-    --muted: 0 0% 88%;
-    --muted-foreground: 0 0% 70%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 240 10% 40%;
 
     /* Accent colors */
-    --accent: 0 0% 77%;
+    --accent: 224 76% 48%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive colors */
@@ -35,9 +35,9 @@
     --destructive-foreground: 0 0% 100%;
 
     /* Borders and inputs */
-    --border: 0 0% 88%;
-    --input: 0 0% 88%;
-    --ring: 0 0% 77%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 224 76% 48%;
 
     /* Success colors */
     --success: 142 72% 29%;
@@ -121,37 +121,67 @@
 /* Adaptive icon styles for both modes */
 svg,
 .icon {
-  @apply text-gray-600 fill-current transition-colors duration-200;
+  @apply transition-colors duration-200;
 }
 
 [data-icon],
 .upload-icon,
 .action-icon {
-  @apply text-gray-600 transition-colors duration-200;
+  @apply transition-colors duration-200;
 }
 
-/* Dark mode icon styles */
+/* Light mode specific icon styles */
+svg,
+.icon {
+  @apply text-gray-700;
+}
+
+[data-icon],
+.upload-icon,
+.action-icon {
+  @apply text-gray-700;
+}
+
+.icon-button:hover svg,
+.icon-button:hover .icon {
+  @apply text-gray-900 opacity-90;
+}
+
+.icon-button:active svg,
+.icon-button:active .icon {
+  @apply text-gray-900 opacity-70;
+}
+
+/* Dark mode specific icon styles */
 .dark svg,
 .dark .icon {
-  @apply text-gray-200 fill-current;
+  @apply text-gray-200;
 }
 
-/* Ensure specific icons remain white in dark mode */
 .dark [data-icon],
 .dark .upload-icon,
 .dark .action-icon {
   @apply text-gray-200;
 }
 
+.dark .icon-button:hover svg,
+.dark .icon-button:hover .icon {
+  @apply text-white opacity-90;
+}
+
+.dark .icon-button:active .icon {
+  @apply text-white opacity-70;
+}
+
 /* Interactive icon states */
 .icon-button:hover svg,
 .icon-button:hover .icon {
-  @apply text-gray-900 dark:text-white;
+  @apply opacity-80;
 }
 
 .icon-button:active svg,
 .icon-button:active .icon {
-  @apply opacity-80;
+  @apply opacity-60;
 }
 
 .rdp {
