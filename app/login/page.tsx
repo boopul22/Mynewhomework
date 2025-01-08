@@ -6,7 +6,6 @@ import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/app/context/AuthContext';
-import { setCookie } from 'cookies-next';
 import { createUserProfile, getUserProfile } from '@/lib/user-service';
 
 export default function LoginPage() {
@@ -49,12 +48,6 @@ export default function LoginPage() {
             photoURL: result.user.photoURL || '',
           });
         }
-
-        // Set authentication cookie
-        setCookie('authenticated', 'true', {
-          maxAge: 30 * 24 * 60 * 60, // 30 days
-          path: '/',
-        });
         
         // Force a hard navigation to dashboard
         window.location.href = '/dashboard';

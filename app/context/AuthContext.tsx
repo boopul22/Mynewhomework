@@ -6,6 +6,7 @@ import { auth } from '../firebase/config';
 import type { UserProfile } from '@/types/index';
 import { createUserProfile, getUserProfile } from '@/lib/user-service';
 import { initializeUserCredits, checkAndRefillCredits } from '@/lib/credit-service';
+import { setCookie, deleteCookie } from 'cookies-next';
 
 interface AuthContextType {
   user: User | null;
@@ -28,18 +29,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUserProfile = async () => {
     if (user) {
-      const profile = await getUserProfile(user.uid);
-      if (profile) {
-        // Initialize credits if they don't exist
-        if (!profile.credits) {
-          await initializeUserCredits(user.uid);
-          // Fetch updated profile
-          const updatedProfile = await getUserProfile(user.uid);
-          setUserProfile(updatedProfile);
-          return;
+      try {
+        const profile = await getUserProfile(user.uid);
+        if (profile) {
+          // Initialize credits if they don't exist
+          if (!profile.credits) {
+            await initializeUserCredits(user.uid);
+            // Fetch updated profile
+            const updatedProfile = await getUserProfile(user.uid);
+            setUserProfile(updatedProfile);
+            return;
+          }
+          await checkAndRefillCredits(user.uid);
+          setUserProfile(profile);
         }
-        await checkAndRefillCredits(user.uid);
-        setUserProfile(profile);
+      } catch (error) {
+        console.error('Error refreshing user profile:', error);
+        // Don't set loading to false here to prevent access to protected routes
       }
     }
   };
@@ -49,30 +55,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user);
       
       if (user) {
-        // Get or create user profile
-        let profile = await getUserProfile(user.uid);
-        
-        if (!profile) {
-          // Create new profile if it doesn't exist
-          profile = await createUserProfile(user.uid, {
-            email: user.email || '',
-            displayName: user.displayName || '',
-            photoURL: user.photoURL || '',
+        try {
+          // Set authentication cookie when user is logged in
+          setCookie('authenticated', 'true', {
+            maxAge: 30 * 24 * 60 * 60, // 30 days
+            path: '/',
           });
-        } else if (!profile.credits) {
-          // Initialize credits if they don't exist
-          await initializeUserCredits(user.uid);
-          profile = await getUserProfile(user.uid);
+
+          // Get or create user profile
+          let profile = await getUserProfile(user.uid);
+          
+          if (!profile) {
+            // Create new profile if it doesn't exist
+            profile = await createUserProfile(user.uid, {
+              uid: user.uid,
+              email: user.email || '',
+              displayName: user.displayName || '',
+              photoURL: user.photoURL || '',
+            });
+          }
+          
+          if (!profile.credits) {
+            // Initialize credits if they don't exist
+            await initializeUserCredits(user.uid);
+            profile = await getUserProfile(user.uid);
+          }
+          
+          // Check and refill credits
+          await checkAndRefillCredits(user.uid);
+          setUserProfile(profile);
+          setLoading(false);
+        } catch (error) {
+          console.error('Error initializing user profile:', error);
+          // Keep loading true to prevent access to protected routes
+          setLoading(true);
         }
-        
-        // Check and refill credits
-        await checkAndRefillCredits(user.uid);
-        setUserProfile(profile);
       } else {
+        // Remove authentication cookie when user is logged out
+        deleteCookie('authenticated');
         setUserProfile(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -83,8 +106,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
 
     const checkCredits = async () => {
-      await checkAndRefillCredits(user.uid);
-      await refreshUserProfile();
+      try {
+        await checkAndRefillCredits(user.uid);
+        await refreshUserProfile();
+      } catch (error) {
+        console.error('Error checking credits:', error);
+      }
     };
 
     // Check credits every hour

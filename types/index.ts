@@ -11,6 +11,11 @@ export interface UserProfile {
     questionsUsed: number;
     questionsLimit: number;
   };
+  credits?: {
+    remaining: number;
+    total: number;
+    lastRefillDate: string;
+  };
   progress: {
     weeklyGoal: number;
     weeklyProgress: number;
