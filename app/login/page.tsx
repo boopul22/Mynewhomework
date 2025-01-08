@@ -7,6 +7,7 @@ import { auth } from '../firebase/config';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/app/context/AuthContext';
 import { setCookie } from 'cookies-next';
+import { createUserProfile, getUserProfile } from '@/lib/user-service';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,28 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       
       if (result.user) {
+        // Check if user profile exists, if not create one
+        try {
+          const profile = await getUserProfile(result.user.uid);
+          if (!profile) {
+            // Create new user profile
+            await createUserProfile(result.user.uid, {
+              uid: result.user.uid,
+              email: result.user.email || '',
+              displayName: result.user.displayName || '',
+              photoURL: result.user.photoURL || '',
+            });
+          }
+        } catch (error) {
+          // If error is "document not found", create new profile
+          await createUserProfile(result.user.uid, {
+            uid: result.user.uid,
+            email: result.user.email || '',
+            displayName: result.user.displayName || '',
+            photoURL: result.user.photoURL || '',
+          });
+        }
+
         // Set authentication cookie
         setCookie('authenticated', 'true', {
           maxAge: 30 * 24 * 60 * 60, // 30 days

@@ -14,7 +14,8 @@ service cloud.firestore {
     
     // Helper function to check if user is an admin
     function isAdmin() {
-      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isAuthenticated() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
     // Helper function to validate subscription update
@@ -36,11 +37,6 @@ service cloud.firestore {
     match /settings/{document} {
       allow read: if true;  // Allow all users to read settings
       allow write: if isAdmin();  // Only admins can modify settings
-      
-      // Subscription settings can only be modified by admins
-      match /subscription {
-        allow write: if isAdmin();
-      }
     }
     
     // Chat history collection (root level)
@@ -54,7 +50,10 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Allow creation for authenticated users creating their own profile
+      allow create: if isAuthenticated() && request.auth.uid == userId && 
+                   request.resource.data.keys().hasAll(['uid', 'email']) && 
+                   request.resource.data.uid == userId;
       allow update: if (isOwner(userId) && isValidSubscriptionUpdate(request.resource.data)) || isAdmin();
       allow delete: if false; // Prevent user deletion
       
