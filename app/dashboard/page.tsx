@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import ProfileButton from '../components/ProfileButton';
 import { Assignment } from '@/types';
 import { getUserAssignments } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';

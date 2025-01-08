@@ -1,5 +1,5 @@
 import { db } from '@/app/firebase/config';
-import { UserProfile, Class, Assignment, Event } from '@/types';
+import type { UserProfile, Class, Assignment, Event } from '@/types/index';
 import {
   doc,
   getDoc,
@@ -10,9 +10,16 @@ import {
   where,
   getDocs,
   Timestamp,
+  addDoc,
 } from 'firebase/firestore';
+import { getCreditSettings } from './credit-service';
 
 const DEFAULT_USER_PROFILE: Omit<UserProfile, 'uid' | 'email' | 'displayName' | 'photoURL'> = {
+  credits: {
+    remaining: 0,
+    total: 0,
+    lastRefillDate: new Date().toISOString()
+  },
   progress: {
     weeklyGoal: 100,
     weeklyProgress: 0,
@@ -32,15 +39,38 @@ const DEFAULT_USER_PROFILE: Omit<UserProfile, 'uid' | 'email' | 'displayName' | 
 
 export async function createUserProfile(uid: string, data: Partial<UserProfile>) {
   const userRef = doc(db, 'users', uid);
+  
+  // Get credit settings for default credits
+  const creditSettings = await getCreditSettings();
+  
+  // Create the user profile
   const defaultData: UserProfile = {
     uid,
     email: data.email || '',
     displayName: data.displayName || '',
     photoURL: data.photoURL || '',
-    ...DEFAULT_USER_PROFILE,
+    credits: {
+      remaining: creditSettings.defaultUserCredits,
+      total: creditSettings.defaultUserCredits,
+      lastRefillDate: new Date().toISOString()
+    },
+    progress: DEFAULT_USER_PROFILE.progress,
+    stats: DEFAULT_USER_PROFILE.stats
   };
 
-  await setDoc(userRef, defaultData, { merge: true });
+  await setDoc(userRef, defaultData);
+
+  // Record the initial credit transaction
+  const transactionRef = collection(db, 'users', uid, 'creditTransactions');
+  await addDoc(transactionRef, {
+    amount: creditSettings.defaultUserCredits,
+    type: 'add',
+    timestamp: new Date().toISOString(),
+    previousBalance: 0,
+    newBalance: creditSettings.defaultUserCredits,
+    description: 'Initial credit allocation'
+  });
+
   return defaultData;
 }
 
@@ -56,6 +86,11 @@ export async function getUserProfile(uid: string): Promise<UserProfile> {
       email: data.email || '',
       displayName: data.displayName || '',
       photoURL: data.photoURL || '',
+      credits: data.credits || {
+        remaining: 0,
+        total: 0,
+        lastRefillDate: new Date().toISOString()
+      },
       progress: {
         weeklyGoal: data.progress?.weeklyGoal ?? DEFAULT_USER_PROFILE.progress.weeklyGoal,
         weeklyProgress: data.progress?.weeklyProgress ?? DEFAULT_USER_PROFILE.progress.weeklyProgress,

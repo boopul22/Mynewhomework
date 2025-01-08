@@ -12,12 +12,63 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
     
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to validate credit update
+    function isValidCreditUpdate(incomingData) {
+      return incomingData.credits.remaining >= 0;
+    }
+
+    // Helper function to validate credit transaction
+    function isValidCreditTransaction() {
+      let incomingData = request.resource.data;
+      return incomingData.amount is number &&
+             incomingData.type in ['add', 'remove', 'purchase', 'use', 'refill'] &&
+             incomingData.timestamp is string &&
+             incomingData.previousBalance is number &&
+             incomingData.newBalance is number &&
+             incomingData.newBalance >= 0;
+    }
+    
+    // Settings collection
+    match /settings/{document} {
+      allow read: if true;  // Allow all users to read settings
+      allow write: if isAdmin();  // Only admins can modify settings
+      
+      // Credit settings can only be modified within reasonable bounds
+      match /credits {
+        allow write: if isAdmin() && 
+          request.resource.data.guestCredits >= 0 &&
+          request.resource.data.defaultUserCredits >= 0 &&
+          request.resource.data.refillAmount >= 0 &&
+          request.resource.data.refillPeriod >= 0;
+      }
+    }
+    
+    // Chat history collection (root level)
+    match /chat_history/{messageId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == request.resource.data.userId;
+      allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+    
     // Users collection
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isOwner(userId);
+      allow update: if (isOwner(userId) && isValidCreditUpdate(request.resource.data)) || isAdmin();
       allow delete: if false; // Prevent user deletion
+      
+      // Credit transaction history
+      match /creditTransactions/{transactionId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if isValidCreditTransaction() && (isOwner(userId) || isAdmin());
+        allow update, delete: if false; // Transactions are immutable
+      }
       
       // Nested collections
       match /classes/{classId} {

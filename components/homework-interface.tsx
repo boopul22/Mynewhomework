@@ -3,17 +3,20 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus } from 'lucide-react'
+import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import remarkGfm from 'remark-gfm'
 import HistorySlider from './history-slider'
-import ProfileButton from '@/app/components/ProfileButton'
 import { useChatHistory } from '@/lib/chat-history'
 import { useAuth } from '@/app/context/AuthContext'
-import { Header } from '@/components/ui/header'
+import { useCredits, getGuestCredits } from '@/lib/credit-service'
+import { toast } from '@/components/ui/use-toast'
+import { signOut } from 'firebase/auth';
+import { auth } from '@/app/firebase/config';
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 
 export default function HomeworkInterface() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -29,6 +32,7 @@ export default function HomeworkInterface() {
   const { user } = useAuth()
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [showCreditAlert, setShowCreditAlert] = useState(false)
 
   const subjects = [
     { icon: Calculator, label: 'Mathematics' },
@@ -149,6 +153,25 @@ export default function HomeworkInterface() {
     }
 
     try {
+      // Check if user has enough credits
+      const hasCredits = await useCredits(user?.uid || null);
+      if (!hasCredits) {
+        setShowCreditAlert(true);
+        setIsLoading(false);
+        setIsStreaming(false);
+        
+        // Show toast notification
+        const remainingCredits = user ? (await getGuestCredits()) : 0;
+        toast({
+          title: "Out of Credits",
+          description: user 
+            ? "You've run out of credits. Please purchase more credits to continue using the homework helper."
+            : `Guest credits (${remainingCredits}) remaining. Sign up to get more credits!`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
       const response = await fetch('/api/gemini', {
         method: 'POST',
         body: formData,
@@ -226,13 +249,55 @@ export default function HomeworkInterface() {
     startNewChat: () => void;
   }
 
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   return (
-    <>
+    <div className="flex flex-col h-full">
+      {showCreditAlert && (
+        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-4 rounded-lg mb-4 mx-4">
+          <div className="flex items-center space-x-2">
+            <Coins className="h-5 w-5 text-amber-500" />
+            <div>
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100">Out of Credits</h4>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                {user 
+                  ? "You've run out of credits. Purchase more credits to continue getting homework help."
+                  : "Guest credits exhausted. Sign up to get more credits and unlock full access!"}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex space-x-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = user ? '/credits' : '/login'}
+              className="text-amber-600 hover:text-amber-700 border-amber-300"
+            >
+              {user ? 'Purchase Credits' : 'Sign Up for More Credits'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowCreditAlert(false)}
+              className="text-amber-600 hover:text-amber-700"
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
       <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} />
       <div className="fixed inset-0 flex flex-col bg-background dark:bg-gradient-to-br dark:from-[#0F0F18] dark:via-[#121220] dark:to-[#0F0F18] transition-colors duration-300">
-        {/* Header */}
-        <Header />
-
+        {/* Theme Toggle */}
+        <div className="absolute top-4 right-4 z-50">
+          <ThemeToggle />
+        </div>
         {/* Main Content */}
         <div className="flex-1 relative overflow-hidden">
           {/* Answer Area */}
@@ -404,7 +469,7 @@ export default function HomeworkInterface() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 

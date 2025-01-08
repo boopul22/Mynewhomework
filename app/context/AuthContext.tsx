@@ -3,8 +3,9 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { UserProfile } from '@/types';
+import type { UserProfile } from '@/types/index';
 import { createUserProfile, getUserProfile } from '@/lib/user-service';
+import { initializeUserCredits, checkAndRefillCredits } from '@/lib/credit-service';
 
 interface AuthContextType {
   user: User | null;
@@ -28,7 +29,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUserProfile = async () => {
     if (user) {
       const profile = await getUserProfile(user.uid);
-      setUserProfile(profile);
+      if (profile) {
+        // Initialize credits if they don't exist
+        if (!profile.credits) {
+          await initializeUserCredits(user.uid);
+          // Fetch updated profile
+          const updatedProfile = await getUserProfile(user.uid);
+          setUserProfile(updatedProfile);
+          return;
+        }
+        await checkAndRefillCredits(user.uid);
+        setUserProfile(profile);
+      }
     }
   };
 
@@ -47,8 +59,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             displayName: user.displayName || '',
             photoURL: user.photoURL || '',
           });
+        } else if (!profile.credits) {
+          // Initialize credits if they don't exist
+          await initializeUserCredits(user.uid);
+          profile = await getUserProfile(user.uid);
         }
         
+        // Check and refill credits
+        await checkAndRefillCredits(user.uid);
         setUserProfile(profile);
       } else {
         setUserProfile(null);
@@ -59,6 +77,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => unsubscribe();
   }, []);
+
+  // Set up periodic credit check
+  useEffect(() => {
+    if (!user) return;
+
+    const checkCredits = async () => {
+      await checkAndRefillCredits(user.uid);
+      await refreshUserProfile();
+    };
+
+    // Check credits every hour
+    const interval = setInterval(checkCredits, 60 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, userProfile, loading, refreshUserProfile }}>

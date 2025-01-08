@@ -21,20 +21,90 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { db } from '@/app/firebase/config';
 import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { Badge } from '@/components/ui/badge';
+import { toast } from '@/components/ui/use-toast';
+import { addCredits } from '@/lib/credit-service';
+import type { UserProfile } from '@/types/index';
 
-interface User {
+interface User extends UserProfile {
   id: string;
-  email: string;
-  name: string;
   isActive: boolean;
   role: string;
   lastLogin: string;
+}
+
+interface CreditDialogProps {
+  user: User;
+  onClose: () => void;
+  onUpdate: () => void;
+}
+
+function CreditDialog({ user, onClose, onUpdate }: CreditDialogProps) {
+  const [amount, setAmount] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+
+  const handleUpdateCredits = async () => {
+    try {
+      setLoading(true);
+      await addCredits(user.id, amount, true);
+      toast({
+        title: 'Credits Updated',
+        description: `Successfully updated credits for ${user.email}`,
+      });
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error('Error updating credits:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update credits',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Modify Credits - {user.email}</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4 py-4">
+        <div className="space-y-2">
+          <div className="text-sm font-medium">Current Credits</div>
+          <Badge variant="secondary">
+            {user.credits?.remaining ?? 0} credits
+          </Badge>
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Add/Remove Credits</label>
+          <div className="flex gap-2">
+            <Input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              placeholder="Enter amount (negative to remove)"
+            />
+            <Button onClick={handleUpdateCredits} disabled={loading}>
+              {loading ? 'Updating...' : 'Update'}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Enter a positive number to add credits or a negative number to remove credits.
+          </p>
+        </div>
+      </div>
+    </DialogContent>
+  );
 }
 
 export default function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [showCreditDialog, setShowCreditDialog] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -68,9 +138,14 @@ export default function UserManagement() {
     }
   };
 
+  const handleModifyCredits = (user: User) => {
+    setSelectedUser(user);
+    setShowCreditDialog(true);
+  };
+
   const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    user.displayName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -106,6 +181,7 @@ export default function UserManagement() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Credits</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Last Login</TableHead>
               <TableHead>Actions</TableHead>
@@ -114,9 +190,14 @@ export default function UserManagement() {
           <TableBody>
             {filteredUsers.map((user) => (
               <TableRow key={user.id}>
-                <TableCell>{user.name}</TableCell>
+                <TableCell>{user.displayName}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>{user.role}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary">
+                    {user.credits?.remaining ?? 0}
+                  </Badge>
+                </TableCell>
                 <TableCell>
                   <Switch
                     checked={user.isActive}
@@ -125,15 +206,42 @@ export default function UserManagement() {
                 </TableCell>
                 <TableCell>{user.lastLogin}</TableCell>
                 <TableCell>
-                  <Button variant="outline" size="sm">
-                    Edit
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleModifyCredits(user)}
+                    >
+                      Modify Credits
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      Edit
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={showCreditDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowCreditDialog(false);
+          setSelectedUser(null);
+        }
+      }}>
+        {selectedUser && (
+          <CreditDialog
+            user={selectedUser}
+            onClose={() => {
+              setShowCreditDialog(false);
+              setSelectedUser(null);
+            }}
+            onUpdate={fetchUsers}
+          />
+        )}
+      </Dialog>
     </div>
   );
 } 

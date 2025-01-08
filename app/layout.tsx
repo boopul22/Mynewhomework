@@ -8,8 +8,52 @@ import Script from 'next/script'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Student Dashboard',
+  title: {
+    default: 'Student Dashboard',
+    template: '%s | Student Dashboard'
+  },
   description: 'A modern student dashboard for tracking progress and assignments',
+  metadataBase: new URL('https://your-domain.com'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    title: 'Student Dashboard',
+    description: 'A modern student dashboard for tracking progress and assignments',
+    type: 'website',
+    locale: 'en_US',
+    siteName: 'Student Dashboard',
+    images: [{
+      url: '/og-image.jpg',
+      width: 1200,
+      height: 630,
+      alt: 'Student Dashboard - Track Your Academic Progress'
+    }]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Student Dashboard',
+    description: 'A modern student dashboard for tracking progress and assignments',
+    creator: '@yourusername',
+    images: ['/og-image.jpg']
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: 'your-google-verification-code',
+    yandex: 'your-yandex-verification-code',
+    yahoo: 'your-yahoo-verification-code'
+  },
+  category: 'education'
 }
 
 export default function RootLayout({

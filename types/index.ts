@@ -3,6 +3,11 @@ export interface UserProfile {
   email: string;
   displayName: string;
   photoURL: string;
+  credits: {
+    remaining: number;
+    total: number;
+    lastRefillDate: string;
+  };
   progress: {
     weeklyGoal: number;
     weeklyProgress: number;
@@ -44,5 +49,22 @@ export interface Event {
   date: string;
   time: string;
   imageUrl: string;
+  description: string;
+}
+
+export interface CreditSettings {
+  guestCredits: number;
+  defaultUserCredits: number;
+  refillAmount: number;
+  refillPeriod: number; // in days
+  maxCredits: number;
+  purchaseOptions: CreditPurchaseOption[];
+}
+
+export interface CreditPurchaseOption {
+  id: string;
+  credits: number;
+  price: number;
+  currency: string;
   description: string;
 } 

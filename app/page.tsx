@@ -19,12 +19,12 @@ const Calculator = dynamic(() => import("@/components/Calculator"), {
 
 export default function Home() {
   return (
-    <div className="flex min-h-[calc(100vh-2rem)] flex-col space-y-6 py-6">
+    <main className="flex min-h-screen flex-col">
       <WelcomePopup />
       <Suspense fallback={null}>
         <Calculator />
       </Suspense>
-      <div className="flex flex-1 flex-col overflow-hidden rounded-lg border bg-background shadow-sm">
+      <div className="flex flex-1 flex-col overflow-hidden bg-background">
         <Suspense
           fallback={
             <div className="animate-pulse h-full bg-muted" />
@@ -33,6 +33,6 @@ export default function Home() {
           <HomeworkInterface />
         </Suspense>
       </div>
-    </div>
+    </main>
   )
 }
