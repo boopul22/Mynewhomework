@@ -398,7 +398,7 @@ export default function HomeworkInterface() {
           </div>
 
           {/* Input Area */}
-          <div className="fixed bottom-0 w-full max-w-3xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out left-1/2 -translate-x-1/2">
+          <div className="relative w-full max-w-3xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out mx-auto">
             <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-sm border border-border p-2 relative z-10">
               <div className="flex items-center gap-2">
                 <Button

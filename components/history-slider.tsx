@@ -151,7 +151,7 @@ export default function HistorySlider({ onSelectChat, startNewChat, isOpen, setI
           </div>
 
           {/* Main Content Scrollable Area */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             {/* Navigation Items */}
             <div className="py-5">
               <div className="space-y-1.5 px-4">
