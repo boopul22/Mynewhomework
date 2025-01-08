@@ -37,7 +37,28 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url))
   }
 
-  return NextResponse.next()
+  // Create the response
+  const response = NextResponse.next()
+
+  // Add CSP headers
+  const cspHeader = `
+    default-src 'self';
+    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.firebaseapp.com https://*.googleapis.com https://apis.google.com;
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' blob: data: https://*.googleusercontent.com;
+    frame-src 'self' https://*.firebaseapp.com https://*.googleapis.com https://accounts.google.com;
+    connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com;
+    font-src 'self';
+  `.replace(/\s+/g, ' ').trim()
+
+  // Set security headers
+  response.headers.set('Content-Security-Policy', cspHeader)
+  response.headers.set('X-Content-Type-Options', 'nosniff')
+  response.headers.set('X-Frame-Options', 'DENY')
+  response.headers.set('X-XSS-Protection', '1; mode=block')
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
+
+  return response
 }
 
 export const config = {

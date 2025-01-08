@@ -8,8 +8,10 @@ import { useChatHistory } from '@/lib/chat-history'
 import { useAuth } from '@/app/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import SubscriptionStatus from './subscription-status'
-import { signOut } from 'firebase/auth'
+import { signOut, signInWithPopup, GoogleAuthProvider } from 'firebase/auth'
 import { auth } from '@/app/firebase/config'
+import { createUserProfile } from '@/lib/user-service'
+import { Avatar, AvatarImage, AvatarFallback } from './ui/avatar'
 
 interface HistoryItem {
   id: string
@@ -60,9 +62,54 @@ export default function HistorySlider({ onSelectChat, startNewChat, isOpen, setI
     }
   }
 
-  const handleSignIn = () => {
-    router.push('/login')
-  }
+  const handleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
+      const result = await signInWithPopup(auth, provider);
+      
+      if (result.user) {
+        const { uid, email, displayName, photoURL } = result.user;
+        
+        if (!email) {
+          throw new Error('No email provided from Google Auth');
+        }
+        
+        try {
+          // Create user profile
+          await createUserProfile(uid, {
+            uid,
+            email,
+            displayName: displayName || email.split('@')[0],
+            photoURL: photoURL || '',
+          });
+          
+          router.push('/');
+        } catch (profileError) {
+          console.error('Error creating user profile:', profileError);
+          alert('Failed to create user profile. Please try again.');
+          // Sign out the user if profile creation fails
+          await auth.signOut();
+        }
+      }
+    } catch (error: any) {
+      console.error('Sign-in error:', error);
+      let errorMessage = 'Failed to sign in. Please try again.';
+      
+      if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Please enable popups for this site to sign in with Google.';
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = 'Sign-in cancelled. Please try again.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+      
+      alert(errorMessage);
+    }
+  };
 
   // Group messages by date
   const groupedMessages = messages.reduce((acc, msg) => {
@@ -126,18 +173,27 @@ export default function HistorySlider({ onSelectChat, startNewChat, isOpen, setI
               )}
             </div>
             <div className="flex items-center gap-3 mt-3 text-muted-foreground">
-              <div className="h-8 w-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
+              <div className="h-8 w-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm overflow-hidden">
                 {user?.photoURL ? (
-                  <img 
-                    src={user.photoURL} 
-                    alt="Profile" 
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage 
+                      src={user.photoURL} 
+                      alt={user.displayName || 'Profile'} 
+                      className="object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder-user.jpg';
+                      }}
+                    />
+                    <AvatarFallback>
+                      {user.displayName ? user.displayName[0].toUpperCase() : <User className="h-4 w-4" />}
+                    </AvatarFallback>
+                  </Avatar>
                 ) : (
-                  <BookOpen className="h-4 w-4 text-primary-foreground" />
+                  <User className="h-4 w-4 text-primary-foreground" />
                 )}
               </div>
-              <span className="font-medium">Student</span>
+              <span className="font-medium">{user?.displayName || 'Student'}</span>
             </div>
             {user && (
               <Button
