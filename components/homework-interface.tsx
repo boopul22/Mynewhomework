@@ -398,8 +398,8 @@ export default function HomeworkInterface() {
           </div>
 
           {/* Input Area */}
-          <div className={`fixed bottom-0 w-full max-w-3xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out ${isHistoryOpen ? 'left-[calc(50%+8rem)]' : 'left-1/2'} -translate-x-1/2`}>
-            <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-sm border border-border p-2">
+          <div className="fixed bottom-0 w-full max-w-3xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out left-1/2 -translate-x-1/2">
+            <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-sm border border-border p-2 relative z-10">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -492,10 +492,10 @@ export default function HomeworkInterface() {
                 <Button
                   onClick={handleSubmit}
                   disabled={isLoading || !question.trim()}
-                  className="h-8 w-8 shrink-0 rounded-full bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-all duration-200 shadow-md hover:shadow-lg"
+                  className="h-9 w-9 shrink-0 rounded-full bg-primary hover:bg-primary/90 dark:bg-primary/90 dark:hover:bg-primary disabled:opacity-50 disabled:hover:bg-primary/90 transition-all duration-200 flex items-center justify-center"
                 >
                   {isLoading ? (
-                    <div className="h-3 w-3 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                    <div className="h-3.5 w-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <Send className="h-3.5 w-3.5 text-primary-foreground" />
                   )}
