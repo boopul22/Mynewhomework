@@ -266,7 +266,7 @@ export default function HomeworkInterface() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full max-w-5xl mx-auto">
+    <div className="flex flex-col h-screen w-full max-w-7xl mx-auto">
       {showCreditAlert && (
         <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-4 rounded-lg mb-4">
           <div className="flex items-center space-x-2">
@@ -314,63 +314,91 @@ export default function HomeworkInterface() {
           {/* Answer Area */}
           <div 
             ref={answerContainerRef} 
-            className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-32 mt-16"
+            className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-32 mt-16 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
           >
             {(answer || isLoading) && (
               <div className="space-y-4 w-full max-w-2xl mx-auto pt-6">
-                <div className="flex items-start gap-3">
-                  <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center">
-                    <span className="text-primary-foreground text-sm">AI</span>
-                  </div>
-                  <div className="flex-1 prose dark:prose-invert max-w-none text-foreground text-sm">
-                    {isLoading && !answer && (
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="flex-1 prose dark:prose-invert max-w-none text-foreground text-sm">
+                  {isLoading && !answer && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span>Thinking...</span>
+                    </div>
+                  )}
+                  {isStreaming && answer && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  )}
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      code({ className, children, ...props }) {
+                        const match = /language-(\w+)/.exec(className || '')
+                        return match ? (
+                          <SyntaxHighlighter
+                            language={match[1]}
+                            style={vscDarkPlus as any}
+                            className="rounded-xl border border-border !bg-secondary/50 !mt-4 !mb-4 text-sm p-4 dark:!bg-secondary/30"
+                            showLineNumbers={true}
+                            wrapLines={true}
+                          >
+                            {String(children).replace(/\n$/, '')}
+                          </SyntaxHighlighter>
+                        ) : (
+                          <code className="bg-secondary/50 dark:bg-secondary/30 text-foreground rounded-lg px-2 py-1 text-sm" {...props}>
+                            {children}
+                          </code>
+                        )
+                      },
+                      h1: ({ children }) => <h1 className="text-2xl font-bold mt-6 mb-4">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-xl font-bold mt-5 mb-3">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>,
+                      p: ({ children }) => <p className="text-base leading-relaxed mb-4">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-2">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-2">{children}</ol>,
+                      li: ({ children }) => <li className="text-base">{children}</li>,
+                      blockquote: ({ children }) => (
+                        <blockquote className="border-l-4 border-primary/50 pl-4 italic my-4 text-muted-foreground">
+                          {children}
+                        </blockquote>
+                      ),
+                      table: ({ children }) => (
+                        <div className="overflow-x-auto my-4">
+                          <table className="min-w-full border border-border rounded-lg">
+                            {children}
+                          </table>
                         </div>
-                        <span>Thinking...</span>
-                      </div>
-                    )}
-                    {isStreaming && answer && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                    )}
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code({ className, children, ...props }) {
-                          const match = /language-(\w+)/.exec(className || '')
-                          return match ? (
-                            <SyntaxHighlighter
-                              language={match[1]}
-                              style={vscDarkPlus as any}
-                              className="rounded-xl border border-border !bg-secondary/50 !mt-3 !mb-3 text-xs dark:!bg-secondary/30"
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          ) : (
-                            <code className="bg-secondary/50 dark:bg-secondary/30 text-foreground rounded-lg px-1.5 py-0.5 text-xs" {...props}>
-                              {children}
-                            </code>
-                          )
-                        }
-                      }}
-                    >
-                      {answer}
-                    </ReactMarkdown>
-                  </div>
+                      ),
+                      th: ({ children }) => (
+                        <th className="border-b border-border bg-secondary/50 px-4 py-2 text-left font-semibold">
+                          {children}
+                        </th>
+                      ),
+                      td: ({ children }) => (
+                        <td className="border-b border-border px-4 py-2">
+                          {children}
+                        </td>
+                      ),
+                    }}
+                    className="prose-pre:my-0"
+                  >
+                    {answer}
+                  </ReactMarkdown>
                 </div>
               </div>
             )}
           </div>
 
           {/* Input Area */}
-          <div className={`fixed bottom-0 w-full max-w-2xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out ${isHistoryOpen ? 'left-[calc(50%+8rem)]' : 'left-1/2'} -translate-x-1/2`}>
+          <div className={`fixed bottom-0 w-full max-w-3xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out ${isHistoryOpen ? 'left-[calc(50%+8rem)]' : 'left-1/2'} -translate-x-1/2`}>
             <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-sm border border-border p-2">
               <div className="flex items-center gap-2">
                 <Button
