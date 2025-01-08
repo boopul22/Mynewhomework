@@ -1,6 +1,5 @@
 'use client';
 
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/app/context/AuthContext';
 import { LogOut, User } from 'lucide-react';
@@ -21,7 +20,6 @@ export function Header() {
   return (
     <div className="flex items-center justify-between px-4 py-3">
       <div className="flex items-center gap-2">
-        <ThemeToggle />
       </div>
       {user ? (
         <Button variant="ghost" size="icon" onClick={handleSignOut}>

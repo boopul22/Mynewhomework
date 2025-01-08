@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User, Menu } from 'lucide-react'
+import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -14,10 +14,11 @@ import { useChatHistory } from '@/lib/chat-history'
 import { useAuth } from '@/app/context/AuthContext'
 import { useQuestion } from '@/lib/subscription-service'
 import { toast } from '@/components/ui/use-toast'
-import { signOut } from 'firebase/auth';
+import { signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/app/firebase/config';
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useRouter } from 'next/navigation'
+import { createUserProfile } from '@/lib/user-service'
 
 export default function HomeworkInterface() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -36,6 +37,7 @@ export default function HomeworkInterface() {
   const [showCreditAlert, setShowCreditAlert] = useState(false)
   const router = useRouter()
   const [isHistoryOpen, setIsHistoryOpen] = useState(true)
+  const [selectedModel, setSelectedModel] = useState<'gemini' | 'groq'>('gemini')
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -141,7 +143,7 @@ export default function HomeworkInterface() {
     setIsLoading(true);
     setIsStreaming(true);
     setAnswer("");
-    const currentQuestion = question; // Store question before clearing
+    const currentQuestion = question;
     setQuestion("");
     if (textareaRef.current) {
       textareaRef.current.style.height = '36px';
@@ -180,7 +182,8 @@ export default function HomeworkInterface() {
         return;
       }
 
-      const response = await fetch('/api/gemini', {
+      // Use selected model's endpoint
+      const response = await fetch(`/api/${selectedModel}`, {
         method: 'POST',
         body: formData,
       });
@@ -265,8 +268,101 @@ export default function HomeworkInterface() {
     }
   };
 
+  const handleSignIn = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
+      const result = await signInWithPopup(auth, provider);
+      
+      if (result.user) {
+        const { uid, email, displayName, photoURL } = result.user;
+        
+        if (!email) {
+          throw new Error('No email provided from Google Auth');
+        }
+        
+        try {
+          // Create user profile
+          await createUserProfile(uid, {
+            uid,
+            email,
+            displayName: displayName || email.split('@')[0],
+            photoURL: photoURL || '',
+          });
+        } catch (error) {
+          console.error('Error creating user profile:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to create user profile. Please try again.',
+            variant: 'destructive',
+          });
+          await auth.signOut();
+        }
+      }
+    } catch (error: any) {
+      console.error('Sign-in error:', error);
+      let errorMessage = 'Failed to sign in. Please try again.';
+      
+      if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Please enable popups for this site to sign in with Google.';
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = 'Sign-in cancelled. Please try again.';
+      } else if (error.code === 'auth/network-request-failed') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+      
+      toast({
+        title: 'Error',
+        description: errorMessage,
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen w-full max-w-7xl mx-auto">
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center justify-center flex-1">
+          <div className="flex items-center space-x-2">
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value as 'gemini' | 'groq')}
+              className="bg-background text-foreground border rounded px-2 py-1 text-sm"
+            >
+              <option value="gemini">Gemini</option>
+              <option value="groq">Groq</option>
+            </select>
+            {imageFile && selectedModel === 'groq' && (
+              <div className="text-yellow-500 text-xs">
+                Note: Image input is only supported with Gemini
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-2 shrink-0">
+          <ThemeToggle />
+          {user ? (
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              <LogOut className="h-5 w-5" />
+            </Button>
+          ) : (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-2"
+              onClick={handleSignIn}
+            >
+              <User className="h-4 w-4" />
+              <span>Login</span>
+            </Button>
+          )}
+        </div>
+      </div>
+      
       {showCreditAlert && (
         <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-4 rounded-lg mb-4">
           <div className="flex items-center space-x-2">
@@ -307,10 +403,6 @@ export default function HomeworkInterface() {
         </div>
         
         <div className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ease-in-out ${isHistoryOpen ? 'ml-4' : ''}`}>
-          <div className="absolute top-4 right-4 z-10">
-            <ThemeToggle />
-          </div>
-          
           {/* Answer Area */}
           <div 
             ref={answerContainerRef} 

@@ -160,17 +160,6 @@ export default function HistorySlider({ onSelectChat, startNewChat, isOpen, setI
           <div className="p-6 border-b border-border">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Menu</h2>
-              {user ? (
-                <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Sign out
-                </Button>
-              ) : (
-                <Button variant="ghost" size="sm" onClick={handleSignIn}>
-                  <User className="h-4 w-4 mr-2" />
-                  Sign in
-                </Button>
-              )}
             </div>
             <div className="flex items-center gap-3 mt-3 text-muted-foreground">
               <div className="h-8 w-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm overflow-hidden">
