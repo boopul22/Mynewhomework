@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import { Button } from './ui/button'
-import { MessageSquare, BookOpen, Users, Calendar, FileText, CheckCircle, PenTool, List, Clock, Plus } from 'lucide-react'
+import { MessageSquare, BookOpen, Users, Calendar, FileText, CheckCircle, PenTool, List, Clock, Plus, LogOut, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useChatHistory } from '@/lib/chat-history'
 import { useAuth } from '@/app/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import SubscriptionStatus from './subscription-status'
+import { signOut } from 'firebase/auth'
+import { auth } from '@/app/firebase/config'
 
 interface HistoryItem {
   id: string
@@ -46,6 +48,19 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
 
   const handleNavigation = (href: string) => {
     router.push(href)
+  }
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth)
+      router.push('/login')
+    } catch (error) {
+      console.error('Error signing out:', error)
+    }
+  }
+
+  const handleSignIn = () => {
+    router.push('/login')
   }
 
   // Group messages by date
@@ -100,13 +115,32 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
             </div>
             <span className="font-medium">Student</span>
           </div>
-          <Button
-            onClick={startNewChat}
-            className="flex items-center justify-center gap-2 bg-secondary/80 hover:bg-secondary text-secondary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-6 shadow-sm hover:shadow backdrop-blur-sm"
-          >
-            <Plus className="h-4 w-4" />
-            Ask one more
-          </Button>
+          {user ? (
+            <Button
+              onClick={handleSignOut}
+              className="flex items-center justify-center gap-2 bg-destructive/90 hover:bg-destructive text-destructive-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-6 shadow-sm hover:shadow backdrop-blur-sm"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSignIn}
+              className="flex items-center justify-center gap-2 bg-primary/90 hover:bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-6 shadow-sm hover:shadow backdrop-blur-sm"
+            >
+              <User className="h-4 w-4" />
+              Sign In
+            </Button>
+          )}
+          {user && (
+            <Button
+              onClick={startNewChat}
+              className="flex items-center justify-center gap-2 bg-secondary/80 hover:bg-secondary text-secondary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-3 shadow-sm hover:shadow backdrop-blur-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Ask one more
+            </Button>
+          )}
         </div>
 
         {/* Main Content Scrollable Area */}
