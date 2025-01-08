@@ -1,21 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/app/context/AuthContext';
+import { setCookie } from 'cookies-next';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { user } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
 
   const signInWithGoogle = async () => {
     try {
       setLoading(true);
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-      router.push('/dashboard');
+      const result = await signInWithPopup(auth, provider);
+      
+      if (result.user) {
+        // Set authentication cookie
+        setCookie('authenticated', 'true', {
+          maxAge: 30 * 24 * 60 * 60, // 30 days
+          path: '/',
+        });
+        
+        // Force a hard navigation to dashboard
+        window.location.href = '/dashboard';
+      }
     } catch (error) {
       console.error('Error signing in with Google:', error);
     } finally {
@@ -23,14 +43,17 @@ export default function LoginPage() {
     }
   };
 
+  // Don't render anything if we're redirecting
+  if (user) return null;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
         <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
             Welcome to Student Dashboard
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Sign in to access your personalized dashboard
           </p>
         </div>
@@ -38,7 +61,7 @@ export default function LoginPage() {
           <Button
             onClick={signInWithGoogle}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 hover:bg-gray-50 border border-gray-300"
+            className="w-full flex items-center justify-center gap-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600"
           >
             <img
               src="/google.svg"
