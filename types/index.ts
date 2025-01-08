@@ -3,10 +3,13 @@ export interface UserProfile {
   email: string;
   displayName: string;
   photoURL: string;
-  credits: {
-    remaining: number;
-    total: number;
-    lastRefillDate: string;
+  subscription: {
+    plan: 'free' | 'homework-helper' | 'homework-helper-essay';
+    status: 'active' | 'cancelled' | 'expired';
+    startDate: string;
+    endDate: string;
+    questionsUsed: number;
+    questionsLimit: number;
   };
   progress: {
     weeklyGoal: number;
@@ -52,19 +55,19 @@ export interface Event {
   description: string;
 }
 
-export interface CreditSettings {
-  guestCredits: number;
-  defaultUserCredits: number;
-  refillAmount: number;
-  refillPeriod: number; // in days
-  maxCredits: number;
-  purchaseOptions: CreditPurchaseOption[];
+export interface SubscriptionPlan {
+  id: 'free' | 'homework-helper' | 'homework-helper-essay';
+  name: string;
+  price: number;
+  interval: 'month' | 'year';
+  features: string[];
+  questionsPerDay: number;
+  subjects: 'limited' | 'unlimited';
+  aiModel: 'standard' | 'advanced';
 }
 
-export interface CreditPurchaseOption {
-  id: string;
-  credits: number;
-  price: number;
-  currency: string;
-  description: string;
+export interface SubscriptionSettings {
+  plans: SubscriptionPlan[];
+  defaultPlan: 'free';
+  trialDays: number;
 } 

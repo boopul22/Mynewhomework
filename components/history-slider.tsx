@@ -1,18 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from './ui/button'
-import { MessageSquare, Brain, History, BookOpen, Users, Calendar, FileText, Target, CheckCircle, PenTool, List, LogOut, Clock, Plus, Coins, AlertCircle, Loader2 } from 'lucide-react'
+import { MessageSquare, BookOpen, Users, Calendar, FileText, CheckCircle, PenTool, List, Clock, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useChatHistory } from '@/lib/chat-history'
-import { format } from 'date-fns'
 import { useAuth } from '@/app/context/AuthContext'
 import { useRouter } from 'next/navigation'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import type { CreditSettings, CreditPurchaseOption } from '@/types/index'
-import { getCreditSettings, getGuestCredits, useCredits, initializeUserCredits } from '@/lib/credit-service'
-import { toast } from '@/components/ui/use-toast'
+import SubscriptionStatus from './subscription-status'
 
 interface HistoryItem {
   id: string
@@ -31,89 +26,9 @@ interface HistorySliderProps {
 
 export default function HistorySlider({ onSelectChat, startNewChat }: HistorySliderProps) {
   const [isOpen, setIsOpen] = useState(true)
-  const [settings, setSettings] = useState<CreditSettings | null>(null)
-  const [guestCredits, setGuestCredits] = useState<number | null>(null)
-  const [loading, setLoading] = useState(true)
   const { messages, isLoading, error } = useChatHistory()
-  const { user, userProfile, refreshUserProfile } = useAuth()
+  const { user } = useAuth()
   const router = useRouter()
-
-  useEffect(() => {
-    let mounted = true
-
-    const loadCreditInfo = async () => {
-      if (!mounted) return
-      
-      try {
-        setLoading(true)
-        const creditSettings = await getCreditSettings()
-        
-        if (!mounted) return
-        setSettings(creditSettings)
-        
-        if (!user) {
-          const guestCreditCount = await getGuestCredits()
-          if (!mounted) return
-          setGuestCredits(guestCreditCount)
-        }
-      } catch (error) {
-        console.error('Error loading credit information:', error)
-        if (!mounted) return
-        toast({
-          title: 'Error',
-          description: 'Failed to load credit information',
-          variant: 'destructive',
-        })
-      } finally {
-        if (mounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    loadCreditInfo()
-
-    return () => {
-      mounted = false
-    }
-  }, [user])
-
-  useEffect(() => {
-    let mounted = true
-
-    const initializeCreditsIfNeeded = async () => {
-      if (!user || !userProfile || userProfile.credits) return
-
-      try {
-        await initializeUserCredits(user.uid)
-        if (mounted) {
-          await refreshUserProfile()
-        }
-      } catch (error) {
-        console.error('Error initializing credits:', error)
-        if (mounted) {
-          toast({
-            title: 'Error',
-            description: 'Failed to initialize credits',
-            variant: 'destructive',
-          })
-        }
-      }
-    }
-
-    initializeCreditsIfNeeded()
-
-    return () => {
-      mounted = false
-    }
-  }, [user, userProfile, refreshUserProfile])
-
-  const handlePurchase = async (option: CreditPurchaseOption) => {
-    toast({
-      title: 'Coming Soon',
-      description: 'Credit purchase functionality will be available soon!',
-    })
-  }
 
   const navigationItems = [
     { icon: <MessageSquare className="h-4 w-4" />, label: 'Dashboard', href: '/dashboard' },
@@ -228,116 +143,35 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
             </div>
           </div>
 
-          {/* Credits Section */}
+          {/* Subscription Status */}
           <div className="py-5 border-t border-border">
-            <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Credits</h2>
+            <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Subscription</h2>
             <div className="px-4">
-              {loading ? (
-                <div className="flex items-center justify-center p-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                </div>
-              ) : (
-                <div className="space-y-4 p-2">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Available Credits</span>
-                      <Badge variant="secondary">
-                        {user ? userProfile?.credits?.remaining ?? 0 : guestCredits ?? 0}
-                      </Badge>
-                    </div>
-                    <Progress 
-                      value={((user ? userProfile?.credits?.remaining ?? 0 : guestCredits ?? 0) / 
-                        (user ? Math.max(userProfile?.credits?.remaining ?? 0, settings?.maxCredits ?? 100) : settings?.guestCredits ?? 5)) * 100} 
-                      className="h-2" 
-                    />
-                  </div>
-
-                  {((user ? userProfile?.credits?.remaining ?? 0 : guestCredits ?? 0) === 0) && (
-                    <div className="flex items-center space-x-2 text-amber-500 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-md">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm">You've run out of credits!</span>
-                    </div>
-                  )}
-
-                  {!user && (guestCredits ?? 0) <= 2 && (guestCredits ?? 0) > 0 && (
-                    <div className="flex items-center space-x-2 text-amber-500 bg-amber-50 dark:bg-amber-950/50 p-3 rounded-md">
-                      <AlertCircle className="h-4 w-4" />
-                      <span className="text-sm">Sign up to get {settings?.defaultUserCredits} credits!</span>
-                    </div>
-                  )}
-
-                  {user && settings?.purchaseOptions && (
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-sm">Purchase More Credits</h4>
-                      <div className="grid gap-2">
-                        {settings.purchaseOptions.map((option: CreditPurchaseOption) => (
-                          <Button
-                            key={option.id}
-                            variant="outline"
-                            size="sm"
-                            className="w-full justify-between text-xs"
-                            onClick={() => handlePurchase(option)}
-                          >
-                            <span>{option.description}</span>
-                            <span className="font-semibold">${option.price}</span>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {!user && (
-                    <Button 
-                      className="w-full" 
-                      variant="default" 
-                      size="sm"
-                      onClick={() => window.location.href = '/login'}
-                    >
-                      Sign Up for More Credits
-                    </Button>
-                  )}
-                </div>
-              )}
+              <SubscriptionStatus />
             </div>
           </div>
 
-          {/* Chat History */}
-          <div className="py-5 border-t border-border">
-            <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Chat History</h2>
-            <div className="space-y-1.5 px-4">
-              {messages.map((chat, index) => (
-                <button
-                  key={index}
-                  onClick={() => onSelectChat(chat.question, chat.answer, chat.chatId)}
-                  className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium"
-                >
-                  <span className="text-primary/90">
-                    <MessageSquare className="h-4 w-4" />
-                  </span>
-                  <span className="truncate">{chat.question}</span>
-                </button>
-              ))}
+          {/* Chat History Section */}
+          {Object.entries(groupedMessages).map(([category, msgs]) => (
+            <div key={category} className="py-5 border-t border-border">
+              <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">{category}</h2>
+              <div className="space-y-1.5 px-4">
+                {msgs.map((msg) => (
+                  <button
+                    key={msg.id}
+                    onClick={() => onSelectChat(msg.question, msg.answer, msg.chatId)}
+                    className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium text-left"
+                  >
+                    <span className="text-primary/90">
+                      <Clock className="h-4 w-4" />
+                    </span>
+                    <span className="truncate">{msg.question}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          ))}
         </div>
-
-        {/* Logout Button */}
-        <div className="p-4 border-t border-border mt-auto">
-          <button className="w-full flex items-center gap-3 px-4 py-3 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium">
-            <LogOut className="h-4 w-4 text-destructive" />
-            <span>Logout</span>
-          </button>
-        </div>
-
-        {/* Toggle Button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute -right-12 top-1/2 -translate-y-1/2 bg-primary/90 text-primary-foreground hover:bg-primary rounded-l-none h-12 w-12 shadow-lg"
-          onClick={() => setIsOpen(!isOpen)}
-        >
-          <History className="h-5 w-5" />
-        </Button>
       </div>
     </div>
   )

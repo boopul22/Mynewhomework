@@ -10,6 +10,7 @@ import {
 } from 'firebase/auth';
 import { auth, db } from './config';
 import { doc, setDoc, collection, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { initializeUserSubscription } from '@/lib/subscription-service';
 
 export const signUp = async (email: string, password: string) => {
   try {
@@ -21,6 +22,9 @@ export const signUp = async (email: string, password: string) => {
       email: user.email,
       createdAt: serverTimestamp(),
     });
+
+    // Initialize subscription
+    await initializeUserSubscription(user.uid);
     
     return { user, error: null };
   } catch (error) {
@@ -46,7 +50,7 @@ export const signInWithGoogle = async () => {
     // Check if user document exists
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     
-    // If user document doesn't exist, create it
+    // If user document doesn't exist, create it and initialize subscription
     if (!userDoc.exists()) {
       await setDoc(doc(db, 'users', user.uid), {
         email: user.email,
@@ -54,6 +58,9 @@ export const signInWithGoogle = async () => {
         photoURL: user.photoURL,
         createdAt: serverTimestamp(),
       });
+      
+      // Initialize subscription
+      await initializeUserSubscription(user.uid);
     }
 
     return { user, error: null };

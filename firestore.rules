@@ -17,20 +17,19 @@ service cloud.firestore {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     
-    // Helper function to validate credit update
-    function isValidCreditUpdate(incomingData) {
-      return incomingData.credits.remaining >= 0;
+    // Helper function to validate subscription update
+    function isValidSubscriptionUpdate(incomingData) {
+      return incomingData.subscription.status in ['active', 'cancelled', 'expired'] &&
+             incomingData.subscription.questionsUsed >= 0;
     }
 
-    // Helper function to validate credit transaction
-    function isValidCreditTransaction() {
+    // Helper function to validate subscription history
+    function isValidSubscriptionHistory() {
       let incomingData = request.resource.data;
-      return incomingData.amount is number &&
-             incomingData.type in ['add', 'remove', 'purchase', 'use', 'refill'] &&
+      return incomingData.type in ['trial_start', 'plan_change', 'cancellation'] &&
+             incomingData.plan in ['free', 'homework-helper', 'homework-helper-essay'] &&
              incomingData.timestamp is string &&
-             incomingData.previousBalance is number &&
-             incomingData.newBalance is number &&
-             incomingData.newBalance >= 0;
+             incomingData.endDate is string;
     }
     
     // Settings collection
@@ -38,13 +37,9 @@ service cloud.firestore {
       allow read: if true;  // Allow all users to read settings
       allow write: if isAdmin();  // Only admins can modify settings
       
-      // Credit settings can only be modified within reasonable bounds
-      match /credits {
-        allow write: if isAdmin() && 
-          request.resource.data.guestCredits >= 0 &&
-          request.resource.data.defaultUserCredits >= 0 &&
-          request.resource.data.refillAmount >= 0 &&
-          request.resource.data.refillPeriod >= 0;
+      // Subscription settings can only be modified by admins
+      match /subscription {
+        allow write: if isAdmin();
       }
     }
     
@@ -60,14 +55,14 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if (isOwner(userId) && isValidCreditUpdate(request.resource.data)) || isAdmin();
+      allow update: if (isOwner(userId) && isValidSubscriptionUpdate(request.resource.data)) || isAdmin();
       allow delete: if false; // Prevent user deletion
       
-      // Credit transaction history
-      match /creditTransactions/{transactionId} {
+      // Subscription history
+      match /subscriptionHistory/{historyId} {
         allow read: if isOwner(userId) || isAdmin();
-        allow create: if isValidCreditTransaction() && (isOwner(userId) || isAdmin());
-        allow update, delete: if false; // Transactions are immutable
+        allow create: if isValidSubscriptionHistory() && (isOwner(userId) || isAdmin());
+        allow update, delete: if false; // Subscription history is immutable
       }
       
       // Nested collections

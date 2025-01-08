@@ -12,13 +12,16 @@ import {
   Timestamp,
   addDoc,
 } from 'firebase/firestore';
-import { getCreditSettings } from './credit-service';
+import { getSubscriptionSettings } from './subscription-service';
 
 const DEFAULT_USER_PROFILE: Omit<UserProfile, 'uid' | 'email' | 'displayName' | 'photoURL'> = {
-  credits: {
-    remaining: 0,
-    total: 0,
-    lastRefillDate: new Date().toISOString()
+  subscription: {
+    plan: 'free',
+    status: 'active',
+    startDate: new Date().toISOString(),
+    endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days trial
+    questionsUsed: 0,
+    questionsLimit: 3 // Will be updated from subscription settings
   },
   progress: {
     weeklyGoal: 100,
@@ -40,8 +43,13 @@ const DEFAULT_USER_PROFILE: Omit<UserProfile, 'uid' | 'email' | 'displayName' | 
 export async function createUserProfile(uid: string, data: Partial<UserProfile>) {
   const userRef = doc(db, 'users', uid);
   
-  // Get credit settings for default credits
-  const creditSettings = await getCreditSettings();
+  // Get subscription settings for default plan
+  const subscriptionSettings = await getSubscriptionSettings();
+  const defaultPlan = subscriptionSettings.plans.find(p => p.id === subscriptionSettings.defaultPlan);
+  
+  if (!defaultPlan) {
+    throw new Error('Default subscription plan not found');
+  }
   
   // Create the user profile
   const defaultData: UserProfile = {
@@ -49,10 +57,9 @@ export async function createUserProfile(uid: string, data: Partial<UserProfile>)
     email: data.email || '',
     displayName: data.displayName || '',
     photoURL: data.photoURL || '',
-    credits: {
-      remaining: creditSettings.defaultUserCredits,
-      total: creditSettings.defaultUserCredits,
-      lastRefillDate: new Date().toISOString()
+    subscription: {
+      ...DEFAULT_USER_PROFILE.subscription,
+      questionsLimit: defaultPlan.questionsPerDay
     },
     progress: DEFAULT_USER_PROFILE.progress,
     stats: DEFAULT_USER_PROFILE.stats
@@ -60,15 +67,13 @@ export async function createUserProfile(uid: string, data: Partial<UserProfile>)
 
   await setDoc(userRef, defaultData);
 
-  // Record the initial credit transaction
-  const transactionRef = collection(db, 'users', uid, 'creditTransactions');
-  await addDoc(transactionRef, {
-    amount: creditSettings.defaultUserCredits,
-    type: 'add',
+  // Record the subscription initialization
+  const subscriptionHistoryRef = collection(db, 'users', uid, 'subscriptionHistory');
+  await addDoc(subscriptionHistoryRef, {
+    type: 'trial_start',
+    plan: subscriptionSettings.defaultPlan,
     timestamp: new Date().toISOString(),
-    previousBalance: 0,
-    newBalance: creditSettings.defaultUserCredits,
-    description: 'Initial credit allocation'
+    endDate: defaultData.subscription.endDate
   });
 
   return defaultData;
@@ -86,10 +91,13 @@ export async function getUserProfile(uid: string): Promise<UserProfile> {
       email: data.email || '',
       displayName: data.displayName || '',
       photoURL: data.photoURL || '',
-      credits: data.credits || {
-        remaining: 0,
-        total: 0,
-        lastRefillDate: new Date().toISOString()
+      subscription: data.subscription || {
+        plan: 'free',
+        status: 'active',
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days trial
+        questionsUsed: 0,
+        questionsLimit: 3 // Will be updated from subscription settings
       },
       progress: {
         weeklyGoal: data.progress?.weeklyGoal ?? DEFAULT_USER_PROFILE.progress.weeklyGoal,
