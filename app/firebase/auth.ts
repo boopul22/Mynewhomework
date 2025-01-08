@@ -9,25 +9,25 @@ import {
   signInWithPopup
 } from 'firebase/auth';
 import { auth, db } from './config';
-import { doc, setDoc, collection, addDoc, serverTimestamp, getDoc } from 'firebase/firestore';
-import { initializeUserSubscription } from '@/lib/subscription-service';
+import { doc, getDoc } from 'firebase/firestore';
+import { createUserProfile } from '@/lib/user-service';
 
-export const signUp = async (email: string, password: string) => {
+export const signUp = async (email: string, password: string, displayName?: string) => {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     
-    // Create a user document in Firestore
-    await setDoc(doc(db, 'users', user.uid), {
-      email: user.email,
-      createdAt: serverTimestamp(),
+    // Create a complete user profile with all required data
+    await createUserProfile(user.uid, {
+      uid: user.uid,
+      email: user.email || '',
+      displayName: displayName || user.displayName || email.split('@')[0], // Use provided name, then fallback to email prefix
+      photoURL: user.photoURL || '',
     });
-
-    // Initialize subscription
-    await initializeUserSubscription(user.uid);
     
     return { user, error: null };
   } catch (error) {
+    console.error('Error during signup:', error);
     return { user: null, error };
   }
 };
@@ -37,6 +37,7 @@ export const signIn = async (email: string, password: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return { user: userCredential.user, error: null };
   } catch (error) {
+    console.error('Error during sign in:', error);
     return { user: null, error };
   }
 };
@@ -50,21 +51,19 @@ export const signInWithGoogle = async () => {
     // Check if user document exists
     const userDoc = await getDoc(doc(db, 'users', user.uid));
     
-    // If user document doesn't exist, create it and initialize subscription
+    // If user document doesn't exist, create a complete profile
     if (!userDoc.exists()) {
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email,
-        displayName: user.displayName,
-        photoURL: user.photoURL,
-        createdAt: serverTimestamp(),
+      await createUserProfile(user.uid, {
+        uid: user.uid,
+        email: user.email || '',
+        displayName: user.displayName || user.email?.split('@')[0] || '', // Use Google display name or email prefix
+        photoURL: user.photoURL || '',
       });
-      
-      // Initialize subscription
-      await initializeUserSubscription(user.uid);
     }
 
     return { user, error: null };
   } catch (error) {
+    console.error('Error during Google sign in:', error);
     return { user: null, error };
   }
 };
@@ -74,19 +73,7 @@ export const logOut = async () => {
     await signOut(auth);
     return { error: null };
   } catch (error) {
-    return { error };
-  }
-};
-
-export const saveSearchHistory = async (userId: string, query: string, result: string) => {
-  try {
-    await addDoc(collection(db, 'users', userId, 'searchHistory'), {
-      query,
-      result,
-      timestamp: serverTimestamp(),
-    });
-    return { error: null };
-  } catch (error) {
+    console.error('Error during logout:', error);
     return { error };
   }
 }; 

@@ -12,11 +12,12 @@ import remarkGfm from 'remark-gfm'
 import HistorySlider from './history-slider'
 import { useChatHistory } from '@/lib/chat-history'
 import { useAuth } from '@/app/context/AuthContext'
-import { useCredits, getGuestCredits } from '@/lib/credit-service'
+import { useQuestion } from '@/lib/subscription-service'
 import { toast } from '@/components/ui/use-toast'
 import { signOut } from 'firebase/auth';
 import { auth } from '@/app/firebase/config';
 import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { useRouter } from 'next/navigation'
 
 export default function HomeworkInterface() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -33,6 +34,7 @@ export default function HomeworkInterface() {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [showCreditAlert, setShowCreditAlert] = useState(false)
+  const router = useRouter()
 
   const subjects = [
     { icon: Calculator, label: 'Mathematics' },
@@ -133,49 +135,62 @@ export default function HomeworkInterface() {
   }, [user, loadMessages, currentChatId, createNewChat]);
 
   const handleSubmit = async () => {
-    if (!question.trim()) return
+    if (!question.trim()) return;
 
-    const formData = new FormData()
-    formData.append('prompt', question)
-    formData.append('userId', user ? user.uid : 'anonymous')
+    const formData = new FormData();
+    formData.append('prompt', question);
+    formData.append('userId', user ? user.uid : 'anonymous');
     if (imageFile) {
-      formData.append('image', imageFile)
+      formData.append('image', imageFile);
     }
 
     // Clear previous state and prepare UI
-    setIsLoading(true)
-    setIsStreaming(true)
-    setAnswer("")
-    const currentQuestion = question // Store question before clearing
-    setQuestion("")
+    setIsLoading(true);
+    setIsStreaming(true);
+    setAnswer("");
+    const currentQuestion = question; // Store question before clearing
+    setQuestion("");
     if (textareaRef.current) {
-      textareaRef.current.style.height = '36px'
+      textareaRef.current.style.height = '36px';
     }
 
     try {
       // Check if user has enough credits
-      const hasCredits = await useCredits(user?.uid || null);
-      if (!hasCredits) {
-        setShowCreditAlert(true);
+      if (!user) {
+        router.push('/login');
         setIsLoading(false);
         setIsStreaming(false);
-        
-        // Show toast notification
-        const remainingCredits = user ? (await getGuestCredits()) : 0;
+        return;
+      }
+
+      const canAskQuestion = await useQuestion(user.uid);
+      if (!canAskQuestion) {
+        setIsLoading(false);
+        setIsStreaming(false);
         toast({
-          title: "Out of Credits",
-          description: user 
-            ? "You've run out of credits. Please purchase more credits to continue using the homework helper."
-            : `Guest credits (${remainingCredits}) remaining. Sign up to get more credits!`,
-          variant: "destructive",
+          title: 'Daily Limit Reached',
+          description: (
+            <div className="space-y-2">
+              <p>You've reached your daily question limit.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => router.push('/subscription')}
+                className="w-full mt-2"
+              >
+                Upgrade Plan to Ask More Questions
+              </Button>
+            </div>
+          ),
+          variant: 'destructive',
         });
         return;
       }
-      
+
       const response = await fetch('/api/gemini', {
         method: 'POST',
         body: formData,
-      })
+      });
 
       if (!response.ok) {
         throw new Error(`API request failed with status ${response.status}`)
@@ -264,11 +279,11 @@ export default function HomeworkInterface() {
           <div className="flex items-center space-x-2">
             <Coins className="h-5 w-5 text-amber-500" />
             <div>
-              <h4 className="font-semibold text-amber-900 dark:text-amber-100">Out of Credits</h4>
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100">Question Limit Reached</h4>
               <p className="text-sm text-amber-700 dark:text-amber-300">
                 {user 
-                  ? "You've run out of credits. Purchase more credits to continue getting homework help."
-                  : "Guest credits exhausted. Sign up to get more credits and unlock full access!"}
+                  ? "You've reached your daily question limit. Upgrade your plan to ask more questions."
+                  : "Sign up to get more questions and unlock full access!"}
               </p>
             </div>
           </div>
@@ -276,10 +291,10 @@ export default function HomeworkInterface() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => window.location.href = user ? '/credits' : '/login'}
+              onClick={() => router.push(user ? '/subscription' : '/login')}
               className="text-amber-600 hover:text-amber-700 border-amber-300"
             >
-              {user ? 'Purchase Credits' : 'Sign Up for More Credits'}
+              {user ? 'Upgrade Plan' : 'Sign Up Now'}
             </Button>
             <Button
               variant="ghost"

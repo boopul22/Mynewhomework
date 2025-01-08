@@ -3,6 +3,7 @@ export interface UserProfile {
   email: string;
   displayName: string;
   photoURL: string;
+  role?: 'user' | 'admin';
   subscription: {
     plan: 'free' | 'homework-helper' | 'homework-helper-essay';
     status: 'active' | 'cancelled' | 'expired';
@@ -61,7 +62,7 @@ export interface Event {
 }
 
 export interface SubscriptionPlan {
-  id: 'free' | 'homework-helper' | 'homework-helper-essay';
+  id: string;
   name: string;
   price: number;
   interval: 'month' | 'year';

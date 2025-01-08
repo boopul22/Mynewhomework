@@ -11,6 +11,7 @@ import {
   getDocs,
   Timestamp,
   addDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { getSubscriptionSettings } from './subscription-service';
 
@@ -51,7 +52,7 @@ export async function createUserProfile(uid: string, data: Partial<UserProfile>)
     throw new Error('Default subscription plan not found');
   }
   
-  // Create the user profile
+  // Create the user profile with complete data
   const defaultData: UserProfile = {
     uid,
     email: data.email || '',
@@ -65,18 +66,39 @@ export async function createUserProfile(uid: string, data: Partial<UserProfile>)
     stats: DEFAULT_USER_PROFILE.stats
   };
 
-  await setDoc(userRef, defaultData);
+  // Check if user already exists
+  const userSnap = await getDoc(userRef);
+  const existingData = userSnap.exists() ? userSnap.data() : null;
 
-  // Record the subscription initialization
-  const subscriptionHistoryRef = collection(db, 'users', uid, 'subscriptionHistory');
-  await addDoc(subscriptionHistoryRef, {
-    type: 'trial_start',
-    plan: subscriptionSettings.defaultPlan,
-    timestamp: new Date().toISOString(),
-    endDate: defaultData.subscription.endDate
-  });
+  // Merge with existing data if it exists
+  const finalData = existingData ? {
+    ...existingData,
+    ...defaultData,
+    email: data.email || existingData.email || '', // Preserve existing data if no new data
+    displayName: data.displayName || existingData.displayName || '',
+    photoURL: data.photoURL || existingData.photoURL || '',
+    lastUpdated: serverTimestamp(),
+  } : {
+    ...defaultData,
+    createdAt: serverTimestamp(),
+    lastUpdated: serverTimestamp(),
+  };
 
-  return defaultData;
+  // Save the data
+  await setDoc(userRef, finalData);
+
+  // Only create subscription history for new users
+  if (!existingData) {
+    const subscriptionHistoryRef = collection(db, 'users', uid, 'subscriptionHistory');
+    await addDoc(subscriptionHistoryRef, {
+      type: 'trial_start',
+      plan: subscriptionSettings.defaultPlan,
+      timestamp: new Date().toISOString(),
+      endDate: defaultData.subscription.endDate
+    });
+  }
+
+  return finalData;
 }
 
 export async function getUserProfile(uid: string): Promise<UserProfile> {

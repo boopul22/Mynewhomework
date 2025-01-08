@@ -27,27 +27,21 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       
       if (result.user) {
-        // Check if user profile exists, if not create one
-        try {
-          const profile = await getUserProfile(result.user.uid);
-          if (!profile) {
-            // Create new user profile
-            await createUserProfile(result.user.uid, {
-              uid: result.user.uid,
-              email: result.user.email || '',
-              displayName: result.user.displayName || '',
-              photoURL: result.user.photoURL || '',
-            });
-          }
-        } catch (error) {
-          // If error is "document not found", create new profile
-          await createUserProfile(result.user.uid, {
-            uid: result.user.uid,
-            email: result.user.email || '',
-            displayName: result.user.displayName || '',
-            photoURL: result.user.photoURL || '',
-          });
+        // Get user info from Google Auth
+        const { uid, email, displayName, photoURL } = result.user;
+        
+        // Ensure we have valid data
+        if (!email) {
+          throw new Error('No email provided from Google Auth');
         }
+        
+        // Create or update user profile with Google data
+        await createUserProfile(uid, {
+          uid,
+          email,
+          displayName: displayName || email.split('@')[0], // Fallback to email prefix if no display name
+          photoURL: photoURL || '',
+        });
         
         // Use router for client-side navigation
         router.push('/');

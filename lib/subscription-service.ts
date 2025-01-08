@@ -1,5 +1,5 @@
 import { db } from '@/app/firebase/config';
-import { doc, getDoc, setDoc, updateDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, addDoc, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import type { SubscriptionSettings, SubscriptionPlan, UserProfile } from '@/types/index';
 
 const DEFAULT_SUBSCRIPTION_SETTINGS: SubscriptionSettings = {
@@ -71,8 +71,25 @@ export async function getSubscriptionSettings(): Promise<SubscriptionSettings> {
 }
 
 export async function updateSubscriptionSettings(settings: Partial<SubscriptionSettings>): Promise<void> {
-  const settingsRef = doc(db, 'settings', 'subscription');
-  await updateDoc(settingsRef, settings);
+  try {
+    const settingsRef = doc(db, 'settings', 'subscription');
+    const settingsSnap = await getDoc(settingsRef);
+    
+    if (!settingsSnap.exists()) {
+      // If settings don't exist, create them with defaults first
+      await setDoc(settingsRef, DEFAULT_SUBSCRIPTION_SETTINGS);
+    }
+    
+    // Update only the fields that are provided
+    await updateDoc(settingsRef, {
+      ...(settings.plans && { plans: settings.plans }),
+      ...(settings.defaultPlan && { defaultPlan: settings.defaultPlan }),
+      ...(settings.trialDays && { trialDays: settings.trialDays })
+    });
+  } catch (error) {
+    console.error('Error updating subscription settings:', error);
+    throw error;
+  }
 }
 
 export async function initializeUserSubscription(uid: string): Promise<void> {
@@ -175,9 +192,73 @@ export async function useQuestion(uid: string): Promise<boolean> {
   return true;
 }
 
-export async function resetDailyQuestions(uid: string): Promise<void> {
+export async function migrateFromCreditsToSubscription(uid: string): Promise<void> {
   const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  
+  if (!userSnap.exists()) return;
+  
+  const userData = userSnap.data() as UserProfile;
+  
+  // If user already has a subscription, skip migration
+  if (userData.subscription?.plan) return;
+  
+  // Determine plan based on credits
+  let plan: SubscriptionPlan['id'] = 'free';
+  const totalCredits = userData.credits?.total || 0;
+  
+  if (totalCredits >= 500) {
+    plan = 'homework-helper-essay';
+  } else if (totalCredits >= 150) {
+    plan = 'homework-helper';
+  }
+  
+  const now = new Date();
+  const endDate = new Date();
+  endDate.setMonth(endDate.getMonth() + 1);
+  
+  const planDetails = DEFAULT_SUBSCRIPTION_SETTINGS.plans.find(p => p.id === plan);
+  
+  // Set up new subscription
   await updateDoc(userRef, {
-    'subscription.questionsUsed': 0
+    subscription: {
+      plan,
+      status: 'active',
+      startDate: now.toISOString(),
+      endDate: endDate.toISOString(),
+      questionsUsed: 0,
+      questionsLimit: planDetails?.questionsPerDay || DEFAULT_SUBSCRIPTION_SETTINGS.plans[0].questionsPerDay
+    },
+    // Remove credits field
+    credits: null
   });
+  
+  // Record the migration
+  const subscriptionHistoryRef = collection(db, 'users', uid, 'subscriptionHistory');
+  await addDoc(subscriptionHistoryRef, {
+    type: 'credit_migration',
+    previousCredits: userData.credits,
+    newPlan: plan,
+    timestamp: now.toISOString(),
+    endDate: endDate.toISOString()
+  });
+}
+
+export async function resetDailyQuestions(): Promise<void> {
+  const usersRef = collection(db, 'users');
+  const batch = writeBatch(db);
+  
+  // Get all users with active subscriptions
+  const querySnapshot = await getDocs(query(usersRef, where('subscription.status', '==', 'active')));
+  
+  querySnapshot.forEach((docSnap) => {
+    const userData = docSnap.data() as UserProfile;
+    if (userData.subscription) {
+      batch.update(docSnap.ref, {
+        'subscription.questionsUsed': 0
+      });
+    }
+  });
+  
+  await batch.commit();
 } 
