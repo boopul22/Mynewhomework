@@ -7,6 +7,7 @@ import type { UserProfile } from '@/types/index';
 import { createUserProfile, getUserProfile } from '@/lib/user-service';
 import { initializeUserCredits, checkAndRefillCredits } from '@/lib/credit-service';
 import { setCookie, deleteCookie } from 'cookies-next';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const refreshUserProfile = async () => {
     if (user) {
@@ -85,6 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await checkAndRefillCredits(user.uid);
           setUserProfile(profile);
           setLoading(false);
+
+          // Redirect to homepage if on login page
+          const currentPath = window.location.pathname;
+          if (currentPath === '/login') {
+            router.push('/');
+          }
         } catch (error) {
           console.error('Error initializing user profile:', error);
           // Keep loading true to prevent access to protected routes
@@ -99,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [router]);
 
   // Set up periodic credit check
   useEffect(() => {

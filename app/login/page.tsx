@@ -11,14 +11,14 @@ import { createUserProfile, getUserProfile } from '@/lib/user-service';
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
 
-  // Redirect if already logged in
+  // Redirect if already logged in and profile is loaded
   useEffect(() => {
-    if (user) {
-      router.push('/dashboard');
+    if (user && userProfile) {
+      router.push('/');
     }
-  }, [user, router]);
+  }, [user, userProfile, router]);
 
   const signInWithGoogle = async () => {
     try {
@@ -49,8 +49,8 @@ export default function LoginPage() {
           });
         }
         
-        // Force a hard navigation to dashboard
-        window.location.href = '/dashboard';
+        // Use router for client-side navigation
+        router.push('/');
       }
     } catch (error) {
       console.error('Error signing in with Google:', error);
@@ -60,7 +60,7 @@ export default function LoginPage() {
   };
 
   // Don't render anything if we're redirecting
-  if (user) return null;
+  if (user && userProfile) return null;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
