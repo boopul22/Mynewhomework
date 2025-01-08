@@ -37,14 +37,6 @@ export default function HomeworkInterface() {
   const router = useRouter()
   const [isHistoryOpen, setIsHistoryOpen] = useState(true)
 
-  const subjects = [
-    { icon: Calculator, label: 'Mathematics' },
-    { icon: Book, label: 'English' },
-    { icon: Microscope, label: 'Science' },
-    { icon: History, label: 'History' },
-    { icon: Brain, label: 'Study Tips' },
-  ]
-
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
@@ -274,9 +266,9 @@ export default function HomeworkInterface() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen w-full max-w-5xl mx-auto">
       {showCreditAlert && (
-        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-4 rounded-lg mb-4 mx-4">
+        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-4 rounded-lg mb-4">
           <div className="flex items-center space-x-2">
             <Coins className="h-5 w-5 text-amber-500" />
             <div>
@@ -308,21 +300,24 @@ export default function HomeworkInterface() {
           </div>
         </div>
       )}
-      <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} />
-      <div className="fixed inset-0 flex flex-col bg-background dark:bg-gradient-to-br dark:from-[#0F0F18] dark:via-[#121220] dark:to-[#0F0F18] transition-colors duration-300">
-        {/* Theme Toggle and History Toggle */}
-        <div className="absolute top-4 right-4 z-50">
-          <ThemeToggle />
+      
+      <div className="flex flex-1 relative h-[calc(100vh-2rem)]">
+        <div className={`transition-all duration-300 ease-in-out ${isHistoryOpen ? 'w-64' : 'w-0'}`}>
+          <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} />
         </div>
-        {/* Main Content */}
-        <div className="flex-1 relative overflow-hidden">
+        
+        <div className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ease-in-out ${isHistoryOpen ? 'ml-4' : ''}`}>
+          <div className="absolute top-4 right-4 z-10">
+            <ThemeToggle />
+          </div>
+          
           {/* Answer Area */}
-          {(answer || isLoading) && (
-            <div 
-              ref={answerContainerRef} 
-              className="absolute inset-0 overflow-y-auto overscroll-y-contain px-4 pb-32 max-h-[calc(100vh-8rem)]"
-            >
-              <div className="space-y-4 max-w-2xl mx-auto pt-6">
+          <div 
+            ref={answerContainerRef} 
+            className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-32 mt-16"
+          >
+            {(answer || isLoading) && (
+              <div className="space-y-4 w-full max-w-2xl mx-auto pt-6">
                 <div className="flex items-start gap-3">
                   <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center">
                     <span className="text-primary-foreground text-sm">AI</span>
@@ -371,15 +366,12 @@ export default function HomeworkInterface() {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Input Area */}
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%] max-w-3xl">
-          <div className="relative">
-            <div className="absolute -top-12 left-0 right-0 h-12 bg-gradient-to-t from-background dark:from-[#0F0F18] to-transparent pointer-events-none"></div>
-            <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-lg border border-border p-2">
+          {/* Input Area */}
+          <div className={`fixed bottom-0 w-full max-w-2xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out ${isHistoryOpen ? 'left-[calc(50%+8rem)]' : 'left-1/2'} -translate-x-1/2`}>
+            <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-sm border border-border p-2">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
