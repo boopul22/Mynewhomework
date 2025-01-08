@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User } from 'lucide-react'
+import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User, Menu } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -35,6 +35,7 @@ export default function HomeworkInterface() {
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [showCreditAlert, setShowCreditAlert] = useState(false)
   const router = useRouter()
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true)
 
   const subjects = [
     { icon: Calculator, label: 'Mathematics' },
@@ -307,9 +308,9 @@ export default function HomeworkInterface() {
           </div>
         </div>
       )}
-      <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} />
+      <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} />
       <div className="fixed inset-0 flex flex-col bg-background dark:bg-gradient-to-br dark:from-[#0F0F18] dark:via-[#121220] dark:to-[#0F0F18] transition-colors duration-300">
-        {/* Theme Toggle */}
+        {/* Theme Toggle and History Toggle */}
         <div className="absolute top-4 right-4 z-50">
           <ThemeToggle />
         </div>

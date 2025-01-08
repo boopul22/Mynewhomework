@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from './ui/button'
-import { MessageSquare, BookOpen, Users, Calendar, FileText, CheckCircle, PenTool, List, Clock, Plus, LogOut, User } from 'lucide-react'
+import { MessageSquare, BookOpen, Users, Calendar, FileText, CheckCircle, PenTool, List, Clock, Plus, LogOut, User, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useChatHistory } from '@/lib/chat-history'
 import { useAuth } from '@/app/context/AuthContext'
@@ -24,10 +24,11 @@ interface HistoryItem {
 interface HistorySliderProps {
   onSelectChat: (question: string, answer: string, chatId: string) => void
   startNewChat: () => void
+  isOpen: boolean
+  setIsOpen: (isOpen: boolean) => void
 }
 
-export default function HistorySlider({ onSelectChat, startNewChat }: HistorySliderProps) {
-  const [isOpen, setIsOpen] = useState(true)
+export default function HistorySlider({ onSelectChat, startNewChat, isOpen, setIsOpen }: HistorySliderProps) {
   const { messages, isLoading, error } = useChatHistory()
   const { user } = useAuth()
   const router = useRouter()
@@ -89,124 +90,139 @@ export default function HistorySlider({ onSelectChat, startNewChat }: HistorySli
   }, {} as Record<string, typeof messages>)
 
   return (
-    <div
-      className={cn(
-        "fixed left-0 top-0 h-full w-72 bg-background dark:bg-gradient-to-b dark:from-[#0F0F18] dark:to-[#121220] text-foreground transition-all duration-300 ease-in-out z-50 shadow-lg border-r border-border",
-        !isOpen && "-translate-x-full"
-      )}
-    >
-      <div className="flex flex-col h-full backdrop-blur-xl">
-        {/* Header */}
-        <div className="p-7 border-b border-border">
-          <h1 className="text-2xl font-bold text-foreground">
-            {user ? (user.displayName || user.email?.split('@')[0] || 'User') : 'Guest'}
-          </h1>
-          <div className="flex items-center gap-3 mt-3 text-muted-foreground">
-            <div className="h-8 w-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
-              {user?.photoURL ? (
-                <img 
-                  src={user.photoURL} 
-                  alt="Profile" 
-                  className="h-8 w-8 rounded-full object-cover"
-                />
+    <>
+      <div
+        className={cn(
+          "fixed left-0 top-0 h-full w-[300px] sm:w-[350px] bg-background/95 backdrop-blur-sm border-r border-border z-40 transition-transform duration-300 ease-in-out",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Toggle Button */}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="absolute -right-8 top-1/2 -translate-y-1/2 h-8 w-8 bg-background border border-border shadow-sm rounded-full"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          <span className="sr-only">{isOpen ? 'Close' : 'Open'} sidebar</span>
+        </Button>
+
+        <div className="flex flex-col h-full">
+          {/* Header Section */}
+          <div className="p-6 border-b border-border">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Menu</h2>
+              {user ? (
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign out
+                </Button>
               ) : (
-                <BookOpen className="h-4 w-4 text-primary-foreground" />
+                <Button variant="ghost" size="sm" onClick={handleSignIn}>
+                  <User className="h-4 w-4 mr-2" />
+                  Sign in
+                </Button>
               )}
             </div>
-            <span className="font-medium">Student</span>
-          </div>
-          {user ? (
-            <Button
-              onClick={handleSignOut}
-              className="flex items-center justify-center gap-2 bg-destructive/90 hover:bg-destructive text-destructive-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-6 shadow-sm hover:shadow backdrop-blur-sm"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSignIn}
-              className="flex items-center justify-center gap-2 bg-primary/90 hover:bg-primary text-primary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-6 shadow-sm hover:shadow backdrop-blur-sm"
-            >
-              <User className="h-4 w-4" />
-              Sign In
-            </Button>
-          )}
-          {user && (
-            <Button
-              onClick={startNewChat}
-              className="flex items-center justify-center gap-2 bg-secondary/80 hover:bg-secondary text-secondary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-3 shadow-sm hover:shadow backdrop-blur-sm"
-            >
-              <Plus className="h-4 w-4" />
-              Ask one more
-            </Button>
-          )}
-        </div>
-
-        {/* Main Content Scrollable Area */}
-        <div className="flex-1 overflow-y-auto">
-          {/* Navigation Items */}
-          <div className="py-5">
-            <div className="space-y-1.5 px-4">
-              {navigationItems.map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleNavigation(item.href)}
-                  className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium"
-                >
-                  <span className="text-primary/90">{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              ))}
+            <div className="flex items-center gap-3 mt-3 text-muted-foreground">
+              <div className="h-8 w-8 rounded-full bg-primary/90 flex items-center justify-center shadow-sm">
+                {user?.photoURL ? (
+                  <img 
+                    src={user.photoURL} 
+                    alt="Profile" 
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                ) : (
+                  <BookOpen className="h-4 w-4 text-primary-foreground" />
+                )}
+              </div>
+              <span className="font-medium">Student</span>
             </div>
+            {user && (
+              <Button
+                onClick={startNewChat}
+                className="flex items-center justify-center gap-2 bg-secondary/80 hover:bg-secondary text-secondary-foreground px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 w-full mt-3 shadow-sm hover:shadow backdrop-blur-sm"
+              >
+                <Plus className="h-4 w-4" />
+                Ask one more
+              </Button>
+            )}
           </div>
 
-          {/* Career Goals Section */}
-          <div className="py-5 border-t border-border">
-            <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Career goals</h2>
-            <div className="space-y-1.5 px-4">
-              {careerItems.map((item, index) => (
-                <button
-                  key={index}
-                  className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium"
-                >
-                  <span className="text-primary/90">{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Subscription Status */}
-          <div className="py-5 border-t border-border">
-            <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Subscription</h2>
-            <div className="px-4">
-              <SubscriptionStatus />
-            </div>
-          </div>
-
-          {/* Chat History Section */}
-          {Object.entries(groupedMessages).map(([category, msgs]) => (
-            <div key={category} className="py-5 border-t border-border">
-              <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">{category}</h2>
+          {/* Main Content Scrollable Area */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Navigation Items */}
+            <div className="py-5">
               <div className="space-y-1.5 px-4">
-                {msgs.map((msg) => (
+                {navigationItems.map((item, index) => (
                   <button
-                    key={msg.id}
-                    onClick={() => onSelectChat(msg.question, msg.answer, msg.chatId)}
-                    className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium text-left"
+                    key={index}
+                    onClick={() => handleNavigation(item.href)}
+                    className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium"
                   >
-                    <span className="text-primary/90">
-                      <Clock className="h-4 w-4" />
-                    </span>
-                    <span className="truncate">{msg.question}</span>
+                    <span className="text-primary/90">{item.icon}</span>
+                    <span>{item.label}</span>
                   </button>
                 ))}
               </div>
             </div>
-          ))}
+
+            {/* Career Goals Section */}
+            <div className="py-5 border-t border-border">
+              <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Career goals</h2>
+              <div className="space-y-1.5 px-4">
+                {careerItems.map((item, index) => (
+                  <button
+                    key={index}
+                    className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium"
+                  >
+                    <span className="text-primary/90">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Subscription Status */}
+            <div className="py-5 border-t border-border">
+              <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">Subscription</h2>
+              <div className="px-4">
+                <SubscriptionStatus />
+              </div>
+            </div>
+
+            {/* Chat History Section */}
+            {Object.entries(groupedMessages).map(([category, msgs]) => (
+              <div key={category} className="py-5 border-t border-border">
+                <h2 className="px-7 text-[15px] font-semibold text-foreground mb-3">{category}</h2>
+                <div className="space-y-1.5 px-4">
+                  {msgs.map((msg) => (
+                    <button
+                      key={msg.id}
+                      onClick={() => onSelectChat(msg.question, msg.answer, msg.chatId)}
+                      className="w-full flex items-center gap-4 px-4 py-2.5 text-[15px] rounded-xl hover:bg-secondary/50 transition-colors font-medium text-left"
+                    >
+                      <span className="text-primary/90">
+                        <Clock className="h-4 w-4" />
+                      </span>
+                      <span className="truncate">{msg.question}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+      
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </>
   )
 } 
