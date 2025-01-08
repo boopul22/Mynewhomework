@@ -9,6 +9,8 @@ import Settings from './components/settings';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/app/firebase/config';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { LucideUsers, LucideBarChart2, LucideSettings, LucideLogOut } from 'lucide-react';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -38,7 +40,11 @@ export default function AdminDashboard() {
   }, [router]);
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-background to-muted">
+        <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (!isAdmin) {
@@ -46,42 +52,76 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <Button
-          variant="outline"
-          onClick={() => auth.signOut().then(() => router.push('/login'))}
-        >
-          Sign Out
-        </Button>
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              Admin Dashboard
+            </h1>
+            <p className="text-muted-foreground">
+              Manage your application settings and users
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Button
+              variant="outline"
+              onClick={() => auth.signOut().then(() => router.push('/login'))}
+              className="flex items-center gap-2 hover:bg-destructive hover:text-destructive-foreground transition-colors"
+            >
+              <LucideLogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+
+        <Tabs defaultValue="users" className="space-y-6">
+          <Card className="p-2">
+            <TabsList className="grid w-full grid-cols-3 h-auto gap-4 bg-transparent">
+              <TabsTrigger 
+                value="users"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-2 py-4"
+              >
+                <LucideUsers className="h-4 w-4" />
+                User Management
+              </TabsTrigger>
+              <TabsTrigger 
+                value="analytics"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-2 py-4"
+              >
+                <LucideBarChart2 className="h-4 w-4" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger 
+                value="settings"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground flex items-center gap-2 py-4"
+              >
+                <LucideSettings className="h-4 w-4" />
+                Settings
+              </TabsTrigger>
+            </TabsList>
+          </Card>
+
+          <TabsContent value="users" className="mt-0">
+            <Card className="p-6 shadow-lg border-t-4 border-t-primary">
+              <UserManagement />
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-0">
+            <Card className="p-6 shadow-lg border-t-4 border-t-primary">
+              <Analytics />
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="mt-0">
+            <Card className="p-6 shadow-lg border-t-4 border-t-primary">
+              <Settings />
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
-
-      <Tabs defaultValue="users" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="users">User Management</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="users">
-          <Card className="p-6">
-            <UserManagement />
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="analytics">
-          <Card className="p-6">
-            <Analytics />
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <Card className="p-6">
-            <Settings />
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   );
 } 

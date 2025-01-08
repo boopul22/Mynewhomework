@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI, Part } from '@google/generative-ai'
+import { teacherModelConfig } from '@/lib/teacher-model-config'
 
-const apiKey = process.env.GEMINI_API_KEY;
+const apiKey = process.env.GOOGLE_API_KEY;
 
 if (!apiKey) {
-  console.error("Missing GEMINI_API_KEY environment variable");
-  throw new Error("Missing GEMINI_API_KEY environment variable");
+  console.error("Missing GOOGLE_API_KEY environment variable");
+  throw new Error("Missing GOOGLE_API_KEY environment variable");
 }
 
 const genAI = new GoogleGenerativeAI(apiKey);
@@ -34,13 +35,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the chat model
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: teacherModelConfig.model });
 
-    // Create a chat session
+    // Create a chat session with initial history containing the role
     const chat = model.startChat({
+      history: [
+        {
+          role: "user",
+          parts: [{ text: teacherModelConfig.role }]
+        },
+        {
+          role: "model",
+          parts: [{ text: "I understand and will act as your all-in-one 'homework helper.' As your dedicated educational guide, I am here to simplify complex concepts, help you excel in your assignments, and foster lasting learning skills across all subjects. How can I support your academic journey today?" }]
+        }
+      ],
       generationConfig: {
-        maxOutputTokens: 8000,
-        temperature: 0.7,
+        maxOutputTokens: teacherModelConfig.maxTokens,
+        temperature: teacherModelConfig.temperature,
+        topP: teacherModelConfig.topP,
+        topK: teacherModelConfig.topK,
       },
     });
 
