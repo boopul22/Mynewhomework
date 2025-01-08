@@ -9,17 +9,32 @@ export function middleware(request: NextRequest) {
   const isAuthenticated = request.cookies.get('authenticated')?.value
 
   // Public paths that don't require authentication
-  const publicPaths = ['/login', '/signup', '/forgot-password']
-  const isPublicPath = publicPaths.includes(path)
+  const publicPaths = ['/login', '/signup', '/forgot-password', '/', '/about', '/contact', '/features']
+  
+  // Protected paths that require authentication
+  const protectedPaths = [
+    '/dashboard',
+    '/profile',
+    '/settings',
+    '/homework',
+    '/assignments',
+    '/chat',
+    '/admin'
+  ]
+
+  // Check if the current path is protected
+  const isProtectedPath = protectedPaths.some(protectedPath => 
+    path.startsWith(protectedPath)
+  )
 
   // If the user is not authenticated and trying to access a protected route
-  if (!isAuthenticated && !isPublicPath) {
+  if (!isAuthenticated && isProtectedPath) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
   // If the user is authenticated and trying to access login page
-  if (isAuthenticated && isPublicPath) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  if (isAuthenticated && path === '/login') {
+    return NextResponse.redirect(new URL('/', request.url))
   }
 
   return NextResponse.next()

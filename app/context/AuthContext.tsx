@@ -13,6 +13,7 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  isPublicRoute: boolean;
   refreshUserProfile: () => Promise<void>;
 }
 
@@ -20,24 +21,44 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   userProfile: null,
   loading: true,
+  isPublicRoute: true,
   refreshUserProfile: async () => {},
 });
+
+// Helper function to check if a path is a public route
+const isPublicRoute = (path: string) => {
+  const publicPaths = ['/', '/about', '/contact', '/features'];
+  return publicPaths.includes(path);
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPublic, setIsPublic] = useState(true);
   const router = useRouter();
+
+  // Update isPublic state based on current path
+  useEffect(() => {
+    const updatePublicState = () => {
+      setIsPublic(isPublicRoute(window.location.pathname));
+    };
+    
+    // Update initially
+    updatePublicState();
+
+    // Update on route changes
+    window.addEventListener('popstate', updatePublicState);
+    return () => window.removeEventListener('popstate', updatePublicState);
+  }, []);
 
   const refreshUserProfile = async () => {
     if (user) {
       try {
         const profile = await getUserProfile(user.uid);
         if (profile) {
-          // Initialize credits if they don't exist
           if (!profile.credits) {
             await initializeUserCredits(user.uid);
-            // Fetch updated profile
             const updatedProfile = await getUserProfile(user.uid);
             setUserProfile(updatedProfile);
             return;
@@ -47,7 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Error refreshing user profile:', error);
-        // Don't set loading to false here to prevent access to protected routes
       }
     }
   };
@@ -58,17 +78,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (user) {
         try {
-          // Set authentication cookie when user is logged in
           setCookie('authenticated', 'true', {
-            maxAge: 30 * 24 * 60 * 60, // 30 days
+            maxAge: 30 * 24 * 60 * 60,
             path: '/',
           });
 
-          // Get or create user profile
           let profile = await getUserProfile(user.uid);
           
           if (!profile) {
-            // Create new profile if it doesn't exist
             profile = await createUserProfile(user.uid, {
               uid: user.uid,
               email: user.email || '',
@@ -78,28 +95,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           if (!profile.credits) {
-            // Initialize credits if they don't exist
             await initializeUserCredits(user.uid);
             profile = await getUserProfile(user.uid);
           }
           
-          // Check and refill credits
           await checkAndRefillCredits(user.uid);
           setUserProfile(profile);
           setLoading(false);
 
-          // Redirect to homepage if on login page
+          // Only redirect from login page
           const currentPath = window.location.pathname;
           if (currentPath === '/login') {
             router.push('/');
           }
         } catch (error) {
           console.error('Error initializing user profile:', error);
-          // Keep loading true to prevent access to protected routes
-          setLoading(true);
+          setLoading(false); // Still set loading to false for public routes
         }
       } else {
-        // Remove authentication cookie when user is logged out
         deleteCookie('authenticated');
         setUserProfile(null);
         setLoading(false);
@@ -109,7 +122,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [router]);
 
-  // Set up periodic credit check
   useEffect(() => {
     if (!user) return;
 
@@ -122,15 +134,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    // Check credits every hour
     const interval = setInterval(checkCredits, 60 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, refreshUserProfile }}>
-      {!loading && children}
+    <AuthContext.Provider value={{ 
+      user, 
+      userProfile, 
+      loading, 
+      isPublicRoute: isPublic,
+      refreshUserProfile 
+    }}>
+      {(!loading || isPublic) && children}
     </AuthContext.Provider>
   );
 }
