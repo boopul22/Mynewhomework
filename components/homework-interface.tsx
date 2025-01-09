@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User } from 'lucide-react'
+import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User, X, Loader2 } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -325,18 +325,18 @@ export default function HomeworkInterface() {
   return (
     <div className="flex flex-col h-screen w-full max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 border-b gap-2 sm:gap-0">
-        <div className="flex items-center justify-center w-full sm:flex-1">
-          <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-center w-full sm:w-auto sm:flex-1">
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value as 'gemini' | 'groq')}
-              className="bg-background text-foreground border rounded px-2 py-1 text-sm w-full sm:w-auto"
+              className="bg-background text-foreground border rounded px-2 py-1 text-sm w-full sm:w-auto min-w-[120px]"
             >
               <option value="gemini">Gemini</option>
               <option value="groq">Groq</option>
             </select>
             {imageFile && selectedModel === 'groq' && (
-              <div className="text-yellow-500 text-xs hidden sm:block">
+              <div className="text-yellow-500 text-xs text-center sm:text-left">
                 Note: Image input is only supported with Gemini
               </div>
             )}
@@ -346,17 +346,17 @@ export default function HomeworkInterface() {
         <div className="flex items-center space-x-2 shrink-0">
           <ThemeToggle />
           {user ? (
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="p-2 sm:p-3">
-              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="p-2">
+              <LogOut className="h-4 w-4" />
             </Button>
           ) : (
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex items-center gap-2 text-sm sm:text-base"
+              className="flex items-center gap-2 text-sm"
               onClick={handleSignIn}
             >
-              <User className="h-3 w-3 sm:h-4 sm:w-4" />
+              <User className="h-3 w-3" />
               <span>Login</span>
             </Button>
           )}
@@ -364,24 +364,24 @@ export default function HomeworkInterface() {
       </div>
       
       {showCreditAlert && (
-        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-3 sm:p-4 rounded-lg m-2 sm:m-4">
+        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-3 rounded-lg mx-2 my-1 sm:m-4">
           <div className="flex items-center space-x-2">
-            <Coins className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
+            <Coins className="h-4 w-4 text-amber-500" />
             <div>
-              <h4 className="font-semibold text-amber-900 dark:text-amber-100 text-sm sm:text-base">Question Limit Reached</h4>
-              <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100 text-sm">Question Limit Reached</h4>
+              <p className="text-xs text-amber-700 dark:text-amber-300">
                 {user 
                   ? "You've reached your daily question limit. Upgrade your plan to ask more questions."
                   : "Sign up to get more questions and unlock full access!"}
               </p>
             </div>
           </div>
-          <div className="mt-2 sm:mt-3 flex flex-col sm:flex-row gap-2 sm:space-x-3">
+          <div className="mt-2 flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => router.push(user ? '/subscription' : '/login')}
-              className="text-amber-600 hover:text-amber-700 border-amber-300 w-full sm:w-auto"
+              className="text-amber-600 hover:text-amber-700 border-amber-300 w-full"
             >
               {user ? 'Upgrade Plan' : 'Sign Up Now'}
             </Button>
@@ -389,7 +389,7 @@ export default function HomeworkInterface() {
               variant="ghost"
               size="sm"
               onClick={() => setShowCreditAlert(false)}
-              className="text-amber-600 hover:text-amber-700 w-full sm:w-auto"
+              className="text-amber-600 hover:text-amber-700 w-full"
             >
               Dismiss
             </Button>
@@ -398,20 +398,20 @@ export default function HomeworkInterface() {
       )}
       
       <div className="flex flex-1 relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-2rem)]">
-        <div className={`transition-all duration-300 ease-in-out ${isHistoryOpen ? 'w-64' : 'w-0'}`}>
+        <div className={`absolute sm:relative transition-all duration-300 ease-in-out h-full ${isHistoryOpen ? 'w-full sm:w-64 z-30' : 'w-0'}`}>
           <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} />
         </div>
         
-        <div className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ease-in-out ${isHistoryOpen ? 'ml-4' : ''}`}>
+        <div className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ease-in-out ${isHistoryOpen ? 'sm:ml-4' : ''}`}>
           {/* Answer Area */}
           <div 
             ref={answerContainerRef} 
-            className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-32 mt-16 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] relative"
+            className="flex-1 overflow-y-auto overscroll-y-contain px-2 sm:px-4 pb-32 mt-4 sm:mt-16 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] relative"
             style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
           >
             {(answer || isLoading) && (
-              <div className="space-y-4 w-full max-w-2xl mx-auto pt-6 pb-24">
-                <div className="flex-1 prose dark:prose-invert max-w-none text-foreground text-sm">
+              <div className="space-y-4 w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl mx-auto pt-2 sm:pt-6 pb-24">
+                <div className="prose dark:prose-invert max-w-none text-foreground text-sm sm:text-base">
                   {isLoading && !answer && (
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <div className="flex items-center gap-1">
@@ -438,44 +438,44 @@ export default function HomeworkInterface() {
                           <SyntaxHighlighter
                             language={match[1]}
                             style={vscDarkPlus as any}
-                            className="rounded-xl border border-border !bg-secondary/50 !mt-4 !mb-4 text-sm p-4 dark:!bg-secondary/30"
+                            className="rounded-xl border border-border !bg-secondary/50 !mt-4 !mb-4 text-xs sm:text-sm p-2 sm:p-4 dark:!bg-secondary/30 overflow-x-auto"
                             showLineNumbers={true}
                             wrapLines={true}
                           >
                             {String(children).replace(/\n$/, '')}
                           </SyntaxHighlighter>
                         ) : (
-                          <code className="bg-secondary/50 dark:bg-secondary/30 text-foreground rounded-lg px-2 py-1 text-sm" {...props}>
+                          <code className="bg-secondary/50 dark:bg-secondary/30 text-foreground rounded-lg px-1.5 py-0.5 text-sm" {...props}>
                             {children}
                           </code>
                         )
                       },
-                      h1: ({ children }) => <h1 className="text-2xl font-bold mt-6 mb-4">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-xl font-bold mt-5 mb-3">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-lg font-semibold mt-4 mb-2">{children}</h3>,
-                      p: ({ children }) => <p className="text-base leading-relaxed mb-4">{children}</p>,
-                      ul: ({ children }) => <ul className="list-disc pl-6 mb-4 space-y-2">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-6 mb-4 space-y-2">{children}</ol>,
-                      li: ({ children }) => <li className="text-base">{children}</li>,
+                      h1: ({ children }) => <h1 className="text-xl sm:text-2xl font-bold mt-4 sm:mt-6 mb-3 sm:mb-4">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-lg sm:text-xl font-bold mt-4 sm:mt-5 mb-2 sm:mb-3">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-base sm:text-lg font-semibold mt-3 sm:mt-4 mb-2">{children}</h3>,
+                      p: ({ children }) => <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc pl-4 sm:pl-6 mb-3 sm:mb-4 space-y-1 sm:space-y-2">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-4 sm:pl-6 mb-3 sm:mb-4 space-y-1 sm:space-y-2">{children}</ol>,
+                      li: ({ children }) => <li className="text-sm sm:text-base">{children}</li>,
                       blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-primary/50 pl-4 italic my-4 text-muted-foreground">
+                        <blockquote className="border-l-4 border-primary/50 pl-3 sm:pl-4 italic my-3 sm:my-4 text-muted-foreground text-sm sm:text-base">
                           {children}
                         </blockquote>
                       ),
                       table: ({ children }) => (
-                        <div className="overflow-x-auto my-4">
-                          <table className="min-w-full border border-border rounded-lg">
+                        <div className="overflow-x-auto my-3 sm:my-4 -mx-2 sm:mx-0">
+                          <table className="min-w-full border border-border rounded-lg text-sm">
                             {children}
                           </table>
                         </div>
                       ),
                       th: ({ children }) => (
-                        <th className="border-b border-border bg-secondary/50 px-4 py-2 text-left font-semibold">
+                        <th className="border-b border-border bg-secondary/50 px-3 py-1.5 sm:px-4 sm:py-2 text-left font-semibold text-sm">
                           {children}
                         </th>
                       ),
                       td: ({ children }) => (
-                        <td className="border-b border-border px-4 py-2">
+                        <td className="border-b border-border px-3 py-1.5 sm:px-4 sm:py-2 text-sm">
                           {children}
                         </td>
                       ),
@@ -490,9 +490,9 @@ export default function HomeworkInterface() {
           </div>
 
           {/* Input Area */}
-          <div className={`fixed bottom-0 w-full max-w-3xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out mx-auto z-50 ${isHistoryOpen ? 'left-[calc(16rem+1rem)]' : 'left-0'}`} style={{ right: '0', margin: '0 auto' }}>
+          <div className={`fixed bottom-0 w-full max-w-full sm:max-w-3xl p-2 sm:p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out ${isHistoryOpen ? 'sm:left-[calc(16rem+1rem)]' : 'left-0'}`} style={{ right: '0', margin: '0 auto' }}>
             <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-sm border border-border p-2 relative z-10">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -508,91 +508,67 @@ export default function HomeworkInterface() {
                   accept="image/*"
                   className="hidden"
                 />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={async () => {
-                    try {
-                      const clipboardContent = await navigator.clipboard.readText();
-                      if (clipboardContent) {
-                        setQuestion(prev => prev + clipboardContent);
-                        if (textareaRef.current) {
-                          textareaRef.current.style.height = 'auto';
-                          textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
-                        }
-                      }
-                    } catch (err) {
-                      console.error('Failed to read clipboard:', err);
-                    }
-                  }}
-                  className="h-8 w-8 shrink-0 rounded-full bg-secondary hover:bg-secondary/80 transition-all duration-200"
-                >
-                  <svg 
-                    className="h-4 w-4"
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2"
-                    strokeLinecap="round" 
-                    strokeLinejoin="round"
-                  >
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-                  </svg>
-                </Button>
-                {imagePreview && (
-                  <div className="relative h-8 w-8 rounded-lg overflow-hidden border border-border">
-                    <img src={imagePreview} alt="Preview" className="h-full w-full object-cover" />
-                    <button
-                      onClick={clearImagePreview}
-                      className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-background/50 hover:bg-background/70 text-foreground transition-colors"
-                    >
-                      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M18 6L6 18M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
+                
                 <textarea
+                  ref={textareaRef}
                   value={question}
                   onChange={(e) => {
-                    setQuestion(e.target.value);
-                    if (e.target.value.includes('\n')) {
-                      e.target.style.height = 'auto';
-                      e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                    setQuestion(e.target.value)
+                    e.target.style.height = '36px'
+                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSubmit()
                     }
                   }}
                   onPaste={handlePaste}
-                  placeholder="Ask me anything about your homework"
-                  className="flex w-full resize-none bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ 
-                    minHeight: '36px', 
-                    maxHeight: '120px',
-                    height: '36px',
-                    lineHeight: '36px',
-                    paddingTop: '0px',
-                    paddingBottom: '0px'
-                  }}
-                  ref={textareaRef}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSubmit();
-                    }
-                  }}
+                  placeholder="Ask your homework question..."
+                  className="flex-1 bg-transparent border-0 outline-none resize-none text-sm p-2 h-9 min-h-[36px] max-h-[120px] placeholder:text-muted-foreground w-full"
+                  disabled={isLoading}
                 />
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isLoading || !question.trim()}
-                  className="h-9 w-9 shrink-0 rounded-full bg-primary hover:bg-primary/90 dark:bg-primary/90 dark:hover:bg-primary disabled:opacity-50 disabled:hover:bg-primary/90 transition-all duration-200 flex items-center justify-center"
-                >
-                  {isLoading ? (
-                    <div className="h-3.5 w-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5 text-primary-foreground" />
+                
+                <div className="flex items-center gap-2 shrink-0">
+                  {imagePreview && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={clearImagePreview}
+                      className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   )}
-                </Button>
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!question.trim() || isLoading}
+                    className="rounded-full px-3 h-8 text-xs font-medium whitespace-nowrap"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center gap-1.5">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Processing</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <Send className="h-3 w-3" />
+                        <span>Send</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
               </div>
+              
+              {imagePreview && (
+                <div className="mt-2 relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-24 h-24 object-cover rounded-lg border border-border"
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

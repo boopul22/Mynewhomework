@@ -32,7 +32,7 @@ export default function Calculator() {
   };
 
   return (
-    <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10">
+    <div className="absolute right-4 top-1/2 -translate-y-1/2 z-10 hidden md:block">
       {isExpanded ? (
         <div className="w-48 rounded-2xl bg-background p-3 shadow-lg backdrop-blur-sm transition-all duration-200 hover:scale-102 border border-border">
           <div className="mb-2 rounded-xl bg-background/80 p-1.5">
