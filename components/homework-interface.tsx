@@ -324,19 +324,19 @@ export default function HomeworkInterface() {
 
   return (
     <div className="flex flex-col h-screen w-full max-w-7xl mx-auto">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center justify-center flex-1">
+      <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 border-b gap-2 sm:gap-0">
+        <div className="flex items-center justify-center w-full sm:flex-1">
           <div className="flex items-center space-x-2">
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value as 'gemini' | 'groq')}
-              className="bg-background text-foreground border rounded px-2 py-1 text-sm"
+              className="bg-background text-foreground border rounded px-2 py-1 text-sm w-full sm:w-auto"
             >
               <option value="gemini">Gemini</option>
               <option value="groq">Groq</option>
             </select>
             {imageFile && selectedModel === 'groq' && (
-              <div className="text-yellow-500 text-xs">
+              <div className="text-yellow-500 text-xs hidden sm:block">
                 Note: Image input is only supported with Gemini
               </div>
             )}
@@ -346,17 +346,17 @@ export default function HomeworkInterface() {
         <div className="flex items-center space-x-2 shrink-0">
           <ThemeToggle />
           {user ? (
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              <LogOut className="h-5 w-5" />
+            <Button variant="ghost" size="sm" onClick={handleSignOut} className="p-2 sm:p-3">
+              <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           ) : (
             <Button 
               variant="outline" 
               size="sm" 
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 text-sm sm:text-base"
               onClick={handleSignIn}
             >
-              <User className="h-4 w-4" />
+              <User className="h-3 w-3 sm:h-4 sm:w-4" />
               <span>Login</span>
             </Button>
           )}
@@ -364,24 +364,24 @@ export default function HomeworkInterface() {
       </div>
       
       {showCreditAlert && (
-        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-4 rounded-lg mb-4">
+        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-3 sm:p-4 rounded-lg m-2 sm:m-4">
           <div className="flex items-center space-x-2">
-            <Coins className="h-5 w-5 text-amber-500" />
+            <Coins className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
             <div>
-              <h4 className="font-semibold text-amber-900 dark:text-amber-100">Question Limit Reached</h4>
-              <p className="text-sm text-amber-700 dark:text-amber-300">
+              <h4 className="font-semibold text-amber-900 dark:text-amber-100 text-sm sm:text-base">Question Limit Reached</h4>
+              <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300">
                 {user 
                   ? "You've reached your daily question limit. Upgrade your plan to ask more questions."
                   : "Sign up to get more questions and unlock full access!"}
               </p>
             </div>
           </div>
-          <div className="mt-3 flex space-x-3">
+          <div className="mt-2 sm:mt-3 flex flex-col sm:flex-row gap-2 sm:space-x-3">
             <Button
               variant="outline"
               size="sm"
               onClick={() => router.push(user ? '/subscription' : '/login')}
-              className="text-amber-600 hover:text-amber-700 border-amber-300"
+              className="text-amber-600 hover:text-amber-700 border-amber-300 w-full sm:w-auto"
             >
               {user ? 'Upgrade Plan' : 'Sign Up Now'}
             </Button>
@@ -389,7 +389,7 @@ export default function HomeworkInterface() {
               variant="ghost"
               size="sm"
               onClick={() => setShowCreditAlert(false)}
-              className="text-amber-600 hover:text-amber-700"
+              className="text-amber-600 hover:text-amber-700 w-full sm:w-auto"
             >
               Dismiss
             </Button>
@@ -397,7 +397,7 @@ export default function HomeworkInterface() {
         </div>
       )}
       
-      <div className="flex flex-1 relative h-[calc(100vh-2rem)]">
+      <div className="flex flex-1 relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-2rem)]">
         <div className={`transition-all duration-300 ease-in-out ${isHistoryOpen ? 'w-64' : 'w-0'}`}>
           <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} />
         </div>
@@ -406,11 +406,11 @@ export default function HomeworkInterface() {
           {/* Answer Area */}
           <div 
             ref={answerContainerRef} 
-            className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-32 mt-16 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-32 mt-16 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] relative"
             style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
           >
             {(answer || isLoading) && (
-              <div className="space-y-4 w-full max-w-2xl mx-auto pt-6">
+              <div className="space-y-4 w-full max-w-2xl mx-auto pt-6 pb-24">
                 <div className="flex-1 prose dark:prose-invert max-w-none text-foreground text-sm">
                   {isLoading && !answer && (
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -490,7 +490,7 @@ export default function HomeworkInterface() {
           </div>
 
           {/* Input Area */}
-          <div className="relative w-full max-w-3xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out mx-auto">
+          <div className={`fixed bottom-0 w-full max-w-3xl p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out mx-auto z-50 ${isHistoryOpen ? 'left-[calc(16rem+1rem)]' : 'left-0'}`} style={{ right: '0', margin: '0 auto' }}>
             <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-sm border border-border p-2 relative z-10">
               <div className="flex items-center gap-2">
                 <Button
