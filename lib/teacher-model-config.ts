@@ -12,7 +12,7 @@ Key approaches:
 
 Adjust your guidance based on the student's level and needs.`,
   temperature: 0.7,
-  maxTokens: 4000,
+  maxTokens: 8000,
   topP: 0.95,
   topK: 40,
   presencePenalty: 0.1,

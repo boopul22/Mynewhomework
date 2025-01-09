@@ -23,6 +23,8 @@ function base64ToUint8Array(base64String: string): Uint8Array {
 
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
+  const stream = new TransformStream();
+  const writer = stream.writable.getWriter();
   
   try {
     const formData = await request.formData();
@@ -31,7 +33,12 @@ export async function POST(request: NextRequest) {
     const image = formData.get('image') as string | null;
 
     if (!prompt) {
-      throw new Error('No prompt provided');
+      await writer.write(encoder.encode('No prompt provided'));
+      await writer.close();
+      return new Response(stream.readable, {
+        status: 400,
+        headers: { 'Content-Type': 'text/plain' },
+      });
     }
 
     // Get the chat model
@@ -70,52 +77,37 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create transform stream to handle the response
-    const stream = new TransformStream({
-      async transform(chunk, controller) {
-        controller.enqueue(encoder.encode(chunk));
-      },
-    });
-
     // Set a timeout for the entire operation
     const timeoutMs = 25000; // 25 seconds
     const timeoutPromise = new Promise((_, reject) => {
       setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
     });
 
-    // Start processing in the background
-    (async () => {
-      const writer = stream.writable.getWriter();
-      try {
-        const responsePromise = chat.sendMessage(messageParts);
-        const response = await Promise.race([responsePromise, timeoutPromise]) as Awaited<typeof responsePromise>;
-        const result = await response.response;
-        const text = result.text();
-        
-        // Process and stream the text with proper math handling
-        const processedText = text.replace(/\\\(/g, '\\\\(')
-                                .replace(/\\\)/g, '\\\\)')
-                                .replace(/\$/g, '\\$');
-        
-        // Stream the text in larger chunks for better performance
-        const chunkSize = 100;
-        const words = processedText.split(/(\s+)/);
-        for (let i = 0; i < words.length; i += chunkSize) {
-          const chunk = words.slice(i, i + chunkSize).join('');
-          await writer.write(chunk);
-        }
-      } catch (error: any) {
-        console.error('Streaming error:', error);
-        if (error.message === 'Request timeout') {
-          await writer.write('Sorry, the request timed out. Please try again with a shorter question.');
-        } else {
-          await writer.write('Sorry, an error occurred while processing your request. Please try again.');
-        }
-      } finally {
-        await writer.close();
+    try {
+      const responsePromise = chat.sendMessage(messageParts);
+      const response = await Promise.race([responsePromise, timeoutPromise]) as Awaited<typeof responsePromise>;
+      const result = await response.response;
+      const text = result.text();
+      
+      // Process and stream the text with proper math handling
+      const processedText = text.replace(/\\\(/g, '\\\\(')
+                              .replace(/\\\)/g, '\\\\)')
+                              .replace(/\$/g, '\\$');
+      
+      // Stream the text in chunks
+      const chunks = processedText.match(/.{1,1000}(?:\s|$)/g) || [];
+      for (const chunk of chunks) {
+        await writer.write(encoder.encode(chunk));
       }
-    })();
+    } catch (error: any) {
+      console.error('Streaming error:', error);
+      const errorMessage = error.message === 'Request timeout'
+        ? 'Sorry, the request timed out. Please try again with a shorter question.'
+        : 'Sorry, an error occurred while processing your request. Please try again.';
+      await writer.write(encoder.encode(errorMessage));
+    }
 
+    await writer.close();
     return new Response(stream.readable, {
       headers: {
         'Content-Type': 'text/event-stream',
@@ -125,9 +117,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in Gemini API route:', error);
-    return NextResponse.json(
-      { error: 'Failed to process the request' },
-      { status: 500 }
-    );
+    await writer.write(encoder.encode('Failed to process the request'));
+    await writer.close();
+    return new Response(stream.readable, {
+      status: 500,
+      headers: { 'Content-Type': 'text/plain' },
+    });
   }
 } 
