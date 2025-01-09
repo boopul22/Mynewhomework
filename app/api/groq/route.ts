@@ -38,14 +38,22 @@ export async function POST(request: NextRequest) {
           for await (const chunk of chatCompletion as any) {
             const content = chunk?.choices?.[0]?.delta?.content || '';
             if (content) {
-              await writer.write(content);
+              // Process content to handle math expressions properly
+              const processedContent = content.replace(/\\\(/g, '\\\\(')
+                                            .replace(/\\\)/g, '\\\\)')
+                                            .replace(/\$/g, '\\$');
+              await writer.write(processedContent);
             }
           }
         } catch {
           // If streaming fails, try to get the full response
           const content = (chatCompletion as any)?.choices?.[0]?.message?.content || '';
           if (content) {
-            await writer.write(content);
+            // Process content to handle math expressions properly
+            const processedContent = content.replace(/\\\(/g, '\\\\(')
+                                        .replace(/\\\)/g, '\\\\)')
+                                        .replace(/\$/g, '\\$');
+            await writer.write(processedContent);
           } else {
             await writer.write('Sorry, I could not generate a response.');
           }

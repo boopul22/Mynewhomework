@@ -85,8 +85,13 @@ export async function POST(request: NextRequest) {
         const result = await response.response;
         const text = result.text();
         
+        // Process and stream the text with proper math handling
+        const processedText = text.replace(/\\\(/g, '\\\\(')
+                                .replace(/\\\)/g, '\\\\)')
+                                .replace(/\$/g, '\\$');
+                                
         // Stream the text word by word with minimal delay
-        const words = text.split(/(\s+)/);
+        const words = processedText.split(/(\s+)/);
         for (const word of words) {
           await writer.write(word);
           // Reduced delay for faster output

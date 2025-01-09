@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -19,6 +20,8 @@ import { auth } from '@/app/firebase/config';
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useRouter } from 'next/navigation'
 import { createUserProfile } from '@/lib/user-service'
+import { InlineMath, BlockMath } from 'react-katex'
+import 'katex/dist/katex.min.css'
 
 export default function HomeworkInterface() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -434,6 +437,9 @@ export default function HomeworkInterface() {
                     components={{
                       code({ className, children, ...props }) {
                         const match = /language-(\w+)/.exec(className || '')
+                        if (match && match[1] === 'math') {
+                          return <BlockMath math={String(children).replace(/\n$/, '')} />
+                        }
                         return match ? (
                           <SyntaxHighlighter
                             language={match[1]}
@@ -453,7 +459,33 @@ export default function HomeworkInterface() {
                       h1: ({ children }) => <h1 className="text-xl sm:text-2xl font-bold mt-4 sm:mt-6 mb-3 sm:mb-4">{children}</h1>,
                       h2: ({ children }) => <h2 className="text-lg sm:text-xl font-bold mt-4 sm:mt-5 mb-2 sm:mb-3">{children}</h2>,
                       h3: ({ children }) => <h3 className="text-base sm:text-lg font-semibold mt-3 sm:mt-4 mb-2">{children}</h3>,
-                      p: ({ children }) => <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4">{children}</p>,
+                      p({ children }) {
+                        const childArray = React.Children.toArray(children)
+                        const hasMath = childArray.some(child => 
+                          typeof child === 'string' && child.includes('$')
+                        )
+                        
+                        if (!hasMath) {
+                          return <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4">{children}</p>
+                        }
+
+                        return (
+                          <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4">
+                            {childArray.map((child, index) => {
+                              if (typeof child !== 'string') return child
+                              
+                              const parts = child.split(/(\$[^\$]+\$)/g)
+                              return parts.map((part, i) => {
+                                if (part.startsWith('$') && part.endsWith('$')) {
+                                  const math = part.slice(1, -1)
+                                  return <InlineMath key={`${index}-${i}`} math={math} />
+                                }
+                                return part
+                              })
+                            })}
+                          </p>
+                        )
+                      },
                       ul: ({ children }) => <ul className="list-disc pl-4 sm:pl-6 mb-3 sm:mb-4 space-y-1 sm:space-y-2">{children}</ul>,
                       ol: ({ children }) => <ol className="list-decimal pl-4 sm:pl-6 mb-3 sm:mb-4 space-y-1 sm:space-y-2">{children}</ol>,
                       li: ({ children }) => <li className="text-sm sm:text-base">{children}</li>,
