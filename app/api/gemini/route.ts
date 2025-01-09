@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         },
         {
           role: "model",
-          parts: [{ text: "I understand and will act as your all-in-one 'homework helper.' As your dedicated educational guide, I am here to simplify complex concepts, help you excel in your assignments, and foster lasting learning skills across all subjects. How can I support your academic journey today?" }]
+          parts: [{ text: "I understand and will help you with your homework. How can I assist you today?" }]
         }
       ],
       generationConfig: {
@@ -77,11 +77,18 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Set a timeout for the entire operation
+    const timeoutMs = 25000; // 25 seconds
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+    });
+
     // Start processing in the background
     (async () => {
       const writer = stream.writable.getWriter();
       try {
-        const response = await chat.sendMessage(messageParts);
+        const responsePromise = chat.sendMessage(messageParts);
+        const response = await Promise.race([responsePromise, timeoutPromise]) as Awaited<typeof responsePromise>;
         const result = await response.response;
         const text = result.text();
         
@@ -89,16 +96,21 @@ export async function POST(request: NextRequest) {
         const processedText = text.replace(/\\\(/g, '\\\\(')
                                 .replace(/\\\)/g, '\\\\)')
                                 .replace(/\$/g, '\\$');
-                                
-        // Stream the text word by word with minimal delay
+        
+        // Stream the text in larger chunks for better performance
+        const chunkSize = 100;
         const words = processedText.split(/(\s+)/);
-        for (const word of words) {
-          await writer.write(word);
-          // Reduced delay for faster output
-          await new Promise(resolve => setTimeout(resolve, 5));
+        for (let i = 0; i < words.length; i += chunkSize) {
+          const chunk = words.slice(i, i + chunkSize).join('');
+          await writer.write(chunk);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Streaming error:', error);
+        if (error.message === 'Request timeout') {
+          await writer.write('Sorry, the request timed out. Please try again with a shorter question.');
+        } else {
+          await writer.write('Sorry, an error occurred while processing your request. Please try again.');
+        }
       } finally {
         await writer.close();
       }
