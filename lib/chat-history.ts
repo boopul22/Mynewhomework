@@ -1,6 +1,11 @@
 import { create } from 'zustand'
 import { db, auth } from '@/app/firebase/config'
-import { collection, addDoc, query, orderBy, getDocs, where, serverTimestamp, onSnapshot, limit } from 'firebase/firestore'
+import { 
+  collection, addDoc, query, orderBy, getDocs, 
+  where, serverTimestamp, onSnapshot, limit, 
+  Unsubscribe, enableNetwork, disableNetwork 
+} from 'firebase/firestore'
+import { onAuthStateChanged } from 'firebase/auth'
 
 interface ChatMessage {
   id: string
@@ -19,13 +24,31 @@ interface ChatHistoryState {
   loadMessages: () => Promise<void>
   clearHistory: () => Promise<void>
   createNewChat: () => string
+  unsubscribe: (() => void) | null
+  isOnline: boolean
+  setOnline: (online: boolean) => Promise<void>
 }
 
 export const useChatHistory = create<ChatHistoryState>((set, get) => ({
   messages: [],
   isLoading: false,
   error: null,
+  unsubscribe: null,
+  isOnline: navigator.onLine,
   
+  setOnline: async (online: boolean) => {
+    try {
+      if (online) {
+        await enableNetwork(db);
+      } else {
+        await disableNetwork(db);
+      }
+      set({ isOnline: online });
+    } catch (error) {
+      console.error('Error setting online status:', error);
+    }
+  },
+
   createNewChat: () => {
     const chatId = Math.random().toString(36).substring(7);
     return chatId;
@@ -33,11 +56,10 @@ export const useChatHistory = create<ChatHistoryState>((set, get) => ({
 
   addMessage: async (question: string, answer: string, chatId?: string) => {
     const user = auth.currentUser;
-    console.log('Current user:', user?.uid);
     
     if (!user) {
-      console.warn('User not authenticated, message will not be persisted');
       set((state) => ({
+        error: 'Please sign in to save messages',
         messages: [
           {
             id: Math.random().toString(36).substring(7),
@@ -54,8 +76,6 @@ export const useChatHistory = create<ChatHistoryState>((set, get) => ({
     }
 
     try {
-      console.log('Adding message to Firestore...');
-      // Add to Firestore
       const messageData = {
         userId: user.uid,
         question,
@@ -65,51 +85,32 @@ export const useChatHistory = create<ChatHistoryState>((set, get) => ({
       };
       
       const docRef = await addDoc(collection(db, 'chat_history'), messageData);
-      console.log('Message added to Firestore with ID:', docRef.id);
-
-      // Update local state
-      set((state) => {
-        console.log('Updating local state with new message');
-        return {
-          messages: [
-            {
-              id: docRef.id,
-              question,
-              answer,
-              timestamp: new Date(),
-              userId: user.uid,
-              chatId: messageData.chatId
-            },
-            ...state.messages,
-          ],
-          error: null
-        };
-      });
-    } catch (error: any) {
-      console.error('Error adding message to Firestore:', error);
+      
+      // Update local state immediately for better UX
       set((state) => ({
         messages: [
           {
-            id: Math.random().toString(36).substring(7),
+            id: docRef.id,
             question,
             answer,
             timestamp: new Date(),
             userId: user.uid,
-            chatId: chatId || Math.random().toString(36).substring(7)
+            chatId: messageData.chatId
           },
           ...state.messages,
         ],
-        error: error.message
+        error: null
       }));
+    } catch (error: any) {
+      console.error('Error adding message:', error);
+      set({ error: `Failed to save message: ${error.message}` });
     }
   },
 
   loadMessages: async () => {
     const user = auth.currentUser;
-    console.log('Loading messages for user:', user?.uid);
     
     if (!user) {
-      console.warn('User not authenticated, cannot load messages');
       set({ messages: [], error: 'Please sign in to view chat history' });
       return;
     }
@@ -117,35 +118,52 @@ export const useChatHistory = create<ChatHistoryState>((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      console.log('Querying Firestore for messages...');
+      // Clean up existing subscription if any
+      const currentUnsubscribe = get().unsubscribe;
+      if (currentUnsubscribe && typeof currentUnsubscribe === 'function') {
+        currentUnsubscribe();
+      }
+
       const q = query(
         collection(db, 'chat_history'),
         where('userId', '==', user.uid),
         orderBy('timestamp', 'desc'),
-        limit(20)
+        limit(50)
       );
 
-      const snapshot = await getDocs(q);
-      console.log('Received Firestore documents count:', snapshot.size);
-      const messages = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          question: data.question,
-          answer: data.answer,
-          timestamp: data.timestamp?.toDate() || new Date(),
-          userId: data.userId,
-          chatId: data.chatId
-        };
-      });
+      // Set up real-time listener
+      const unsubscribe = onSnapshot(q, 
+        {
+          next: (snapshot) => {
+            const messages = snapshot.docs.map(doc => {
+              const data = doc.data();
+              return {
+                id: doc.id,
+                question: data.question,
+                answer: data.answer,
+                timestamp: data.timestamp?.toDate() || new Date(),
+                userId: data.userId,
+                chatId: data.chatId
+              };
+            });
+            set({ messages, isLoading: false, error: null });
+          },
+          error: (error) => {
+            console.error('Real-time sync error:', error);
+            set({ 
+              error: `Failed to sync messages: ${error.message}`,
+              isLoading: false 
+            });
+          }
+        }
+      );
 
-      console.log('Processed messages:', messages.length);
-      set({ messages, isLoading: false, error: null });
+      set({ unsubscribe });
       
     } catch (error: any) {
-      console.error('Error loading messages from Firestore:', error);
+      console.error('Error in loadMessages:', error);
       set({ 
-        error: `Error loading chat history: ${error.message}`,
+        error: `Failed to load chat history: ${error.message}`,
         isLoading: false 
       });
     }
@@ -153,7 +171,34 @@ export const useChatHistory = create<ChatHistoryState>((set, get) => ({
 
   clearHistory: async () => {
     const user = auth.currentUser;
-    console.log('Clearing history for user:', user?.uid);
+    if (!user) {
+      set({ error: 'Please sign in to clear history' });
+      return;
+    }
     set({ messages: [], error: null });
   },
-})) 
+}));
+
+// Set up online/offline listeners
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    useChatHistory.getState().setOnline(true);
+  });
+  
+  window.addEventListener('offline', () => {
+    useChatHistory.getState().setOnline(false);
+  });
+  
+  // Set up auth state listener to reload messages when auth state changes
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      useChatHistory.getState().loadMessages();
+    } else {
+      const currentUnsubscribe = useChatHistory.getState().unsubscribe;
+      if (currentUnsubscribe && typeof currentUnsubscribe === 'function') {
+        currentUnsubscribe();
+      }
+      useChatHistory.setState({ messages: [], error: null, unsubscribe: null });
+    }
+  });
+} 

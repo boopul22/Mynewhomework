@@ -409,7 +409,7 @@ export default function HomeworkInterface() {
         </header>
 
         {/* Subject Selection - Scrollable on mobile */}
-        <div className="border-b border-border bg-background/95 overflow-x-auto scrollbar-none">
+        <div className="border-b border-border bg-background/95 overflow-x-auto scrollbar-none touch-pan-x">
           <div className="flex gap-1.5 p-2 sm:p-4 sm:gap-2 max-w-3xl mx-auto min-w-max w-full justify-center">
             {subjects.map((subject) => (
               <Button
@@ -426,7 +426,7 @@ export default function HomeworkInterface() {
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto bg-muted/30">
+        <div className="flex-1 overflow-y-auto bg-muted/30 touch-pan-y">
           <div className="min-h-full flex flex-col max-w-5xl mx-auto p-3 sm:p-6 w-full">
             {/* Question Input Area */}
             <Card className="shadow-sm bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -470,6 +470,7 @@ export default function HomeworkInterface() {
                     }}
                     placeholder={`Type your ${activeSubject ? subjects.find(s => s.id === activeSubject)?.name.toLowerCase() : 'homework'} question here...`}
                     className="w-full resize-none bg-muted/50 rounded-lg px-3 py-2 text-sm sm:text-base min-h-[80px] max-h-[160px] focus:outline-none focus:ring-1 focus:ring-primary/20"
+                    style={{ fontSize: '16px' }}
                   />
                   <div className="flex items-center justify-between">
                     <div className="flex gap-2">
