@@ -141,14 +141,15 @@ export default function HistorySlider({ onSelectChat, startNewChat, isOpen, setI
       <div
         className={cn(
           "fixed left-0 top-0 h-full w-[300px] sm:w-[350px] bg-background/95 backdrop-blur-sm border-r border-border z-40 transition-transform duration-300 ease-in-out",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "sm:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full sm:translate-x-0"
         )}
       >
-        {/* Toggle Button */}
+        {/* Toggle Button - Only visible on mobile */}
         <Button 
           variant="ghost" 
           size="icon" 
-          className="absolute -right-8 top-1/2 -translate-y-1/2 h-8 w-8 bg-background border border-border shadow-sm rounded-full"
+          className="absolute -right-8 top-1/2 -translate-y-1/2 h-8 w-8 bg-background border border-border shadow-sm rounded-full sm:hidden"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -261,10 +262,10 @@ export default function HistorySlider({ onSelectChat, startNewChat, isOpen, setI
         </div>
       </div>
       
-      {/* Overlay for mobile */}
+      {/* Overlay for mobile only */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 sm:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}

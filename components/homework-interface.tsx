@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User, X, Loader2 } from 'lucide-react'
+import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User, X, Loader2, Atom, Beaker, PenTool } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -24,23 +24,30 @@ import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
 
 export default function HomeworkInterface() {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const chatEndRef = useRef<HTMLDivElement>(null)
-  const [question, setQuestion] = useState("")
-  const [answer, setAnswer] = useState<string>("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [imageFile, setImageFile] = useState<string | null>(null)
-  const [isStreaming, setIsStreaming] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const answerContainerRef = useRef<HTMLDivElement>(null)
-  const { addMessage, loadMessages, messages, createNewChat } = useChatHistory()
-  const { user } = useAuth()
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
-  const [showCreditAlert, setShowCreditAlert] = useState(false)
-  const router = useRouter()
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true)
-  const [selectedModel, setSelectedModel] = useState<'gemini' | 'groq'>('gemini')
+  const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [answer, setAnswer] = useState('');
+  const [currentQuestionText, setCurrentQuestionText] = useState('');
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const { user } = useAuth();
+  const { createNewChat, addMessage, loadMessages } = useChatHistory();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const answerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [question, setQuestion] = useState("");
+  const [imageFile, setImageFile] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [showCreditAlert, setShowCreditAlert] = useState(false);
+  const router = useRouter();
+  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [activeSubject, setActiveSubject] = useState<string>('');
+
+  // Error handler type
+  const handleError = (error: Error) => {
+    console.error('Error:', error);
+    setAnswer(`Sorry, I encountered an error: ${error.message || 'Unknown error'}`);
+  };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -93,8 +100,8 @@ export default function HomeworkInterface() {
   };
 
   const scrollToBottom = useCallback(() => {
-    if (answerContainerRef.current) {
-      const scrollContainer = answerContainerRef.current;
+    if (answerRef.current) {
+      const scrollContainer = answerRef.current;
       const scrollHeight = scrollContainer.scrollHeight;
       const height = scrollContainer.clientHeight;
       const maxScroll = scrollHeight - height;
@@ -146,7 +153,7 @@ export default function HomeworkInterface() {
     setIsLoading(true);
     setIsStreaming(true);
     setAnswer("");
-    const currentQuestion = question;
+    setCurrentQuestionText(question);
     setQuestion("");
     if (textareaRef.current) {
       textareaRef.current.style.height = '36px';
@@ -185,8 +192,8 @@ export default function HomeworkInterface() {
         return;
       }
 
-      // Use selected model's endpoint
-      const response = await fetch(`/api/${selectedModel}`, {
+      // Use Groq endpoint
+      const response = await fetch('/api/groq', {
         method: 'POST',
         body: formData,
       });
@@ -214,11 +221,11 @@ export default function HomeworkInterface() {
 
       // Add to chat history after getting full response
       if (currentChatId) {
-        await addMessage(currentQuestion, fullResponse, currentChatId)
+        await addMessage(currentQuestionText, fullResponse, currentChatId)
       } else {
         const newChatId = createNewChat()
         setCurrentChatId(newChatId)
-        await addMessage(currentQuestion, fullResponse, newChatId)
+        await addMessage(currentQuestionText, fullResponse, newChatId)
       }
       
     } catch (error: any) {
@@ -242,6 +249,7 @@ export default function HomeworkInterface() {
   const handleSelectChat = useCallback((selectedQuestion: string, selectedAnswer: string, chatId: string) => {
     setQuestion(selectedQuestion)
     setAnswer(selectedAnswer)
+    setCurrentQuestionText(selectedQuestion)
     setCurrentChatId(chatId)
     setTimeout(scrollToBottom, 100)
   }, [])
@@ -330,19 +338,6 @@ export default function HomeworkInterface() {
       <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 border-b gap-2 sm:gap-0">
         <div className="flex items-center justify-center w-full sm:w-auto sm:flex-1">
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value as 'gemini' | 'groq')}
-              className="bg-background text-foreground border rounded px-2 py-1 text-sm w-full sm:w-auto min-w-[120px]"
-            >
-              <option value="gemini">Gemini</option>
-              <option value="groq">Groq</option>
-            </select>
-            {imageFile && selectedModel === 'groq' && (
-              <div className="text-yellow-500 text-xs text-center sm:text-left">
-                Note: Image input is only supported with Gemini
-              </div>
-            )}
           </div>
         </div>
 
@@ -401,19 +396,27 @@ export default function HomeworkInterface() {
       )}
       
       <div className="flex flex-1 relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-2rem)]">
-        <div className={`absolute sm:relative transition-all duration-300 ease-in-out h-full ${isHistoryOpen ? 'w-full sm:w-64 z-30' : 'w-0'}`}>
-          <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} />
-        </div>
+        <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} />
         
-        <div className={`flex-1 flex flex-col relative min-w-0 transition-all duration-300 ease-in-out ${isHistoryOpen ? 'sm:ml-4' : ''}`}>
+        <div className="flex-1 flex flex-col relative min-w-0">
           {/* Answer Area */}
           <div 
-            ref={answerContainerRef} 
-            className="flex-1 overflow-y-auto overscroll-y-contain px-2 sm:px-4 pb-32 mt-4 sm:mt-16 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] relative"
+            ref={answerRef} 
+            className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-32 mt-4 sm:mt-16 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] relative"
             style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
           >
             {(answer || isLoading) && (
-              <div className="space-y-4 w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl mx-auto pt-2 sm:pt-6 pb-24">
+              <div className="space-y-4 w-full max-w-2xl mx-auto pt-2 sm:pt-6 pb-24">
+                {/* User's Question Display */}
+                <div className="bg-secondary/30 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">Your Question:</span>
+                  </div>
+                  <p className="text-sm text-foreground">{currentQuestionText || "Loading..."}</p>
+                </div>
+                
+                {/* AI's Answer Display */}
                 <div className="prose dark:prose-invert max-w-none text-foreground text-sm sm:text-base">
                   {isLoading && !answer && (
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -459,13 +462,18 @@ export default function HomeworkInterface() {
                       h1: ({ children }) => <h1 className="text-xl sm:text-2xl font-bold mt-4 sm:mt-6 mb-3 sm:mb-4">{children}</h1>,
                       h2: ({ children }) => <h2 className="text-lg sm:text-xl font-bold mt-4 sm:mt-5 mb-2 sm:mb-3">{children}</h2>,
                       h3: ({ children }) => <h3 className="text-base sm:text-lg font-semibold mt-3 sm:mt-4 mb-2">{children}</h3>,
-                      p({ children }) {
+                      p: ({ children }) => {
                         const childArray = React.Children.toArray(children)
-                        const hasMath = childArray.some(child => 
-                          typeof child === 'string' && child.includes('$')
+                        
+                        // Enhanced math detection for both inline and block math
+                        const hasInlineMath = childArray.some(child => 
+                          typeof child === 'string' && child.includes('$') && !child.includes('$$')
+                        )
+                        const hasBlockMath = childArray.some(child =>
+                          typeof child === 'string' && child.includes('$$')
                         )
                         
-                        if (!hasMath) {
+                        if (!hasInlineMath && !hasBlockMath) {
                           return <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4">{children}</p>
                         }
 
@@ -474,13 +482,27 @@ export default function HomeworkInterface() {
                             {childArray.map((child, index) => {
                               if (typeof child !== 'string') return child
                               
-                              const parts = child.split(/(\$[^\$]+\$)/g)
-                              return parts.map((part, i) => {
-                                if (part.startsWith('$') && part.endsWith('$')) {
-                                  const math = part.slice(1, -1)
-                                  return <InlineMath key={`${index}-${i}`} math={math} />
+                              // Handle block math first ($$...$$)
+                              const blockParts = child.split(/(\$\$[^\$]+\$\$)/g)
+                              return blockParts.map((part, i) => {
+                                if (part.startsWith('$$') && part.endsWith('$$')) {
+                                  const math = part.slice(2, -2)
+                                  return (
+                                    <div key={`${index}-block-${i}`} className="my-4 flex justify-center">
+                                      <BlockMath math={math} />
+                                    </div>
+                                  )
                                 }
-                                return part
+                                
+                                // Then handle inline math ($...$)
+                                const inlineParts = part.split(/(\$[^\$]+\$)/g)
+                                return inlineParts.map((inlinePart, j) => {
+                                  if (inlinePart.startsWith('$') && inlinePart.endsWith('$')) {
+                                    const math = inlinePart.slice(1, -1)
+                                    return <InlineMath key={`${index}-inline-${i}-${j}`} math={math} />
+                                  }
+                                  return inlinePart
+                                })
                               })
                             })}
                           </p>
@@ -521,86 +543,135 @@ export default function HomeworkInterface() {
             )}
           </div>
 
-          {/* Input Area */}
-          <div className={`fixed bottom-0 w-full max-w-full sm:max-w-3xl p-2 sm:p-4 bg-background/80 backdrop-blur-sm border-t border-border transition-all duration-300 ease-in-out ${isHistoryOpen ? 'sm:left-[calc(16rem+1rem)]' : 'left-0'}`} style={{ right: '0', margin: '0 auto' }}>
-            <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-xl shadow-sm border border-border p-2 relative z-10">
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="h-8 w-8 shrink-0 rounded-full hover:bg-secondary transition-all duration-200"
-                >
-                  <ImageIcon className="h-4 w-4" />
-                </Button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  accept="image/*"
-                  className="hidden"
-                />
-                
-                <textarea
-                  ref={textareaRef}
-                  value={question}
-                  onChange={(e) => {
-                    setQuestion(e.target.value)
-                    e.target.style.height = '36px'
-                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmit()
-                    }
-                  }}
-                  onPaste={handlePaste}
-                  placeholder="Ask your homework question..."
-                  className="flex-1 bg-transparent border-0 outline-none resize-none text-sm p-2 h-9 min-h-[36px] max-h-[120px] placeholder:text-muted-foreground w-full"
-                  disabled={isLoading}
-                />
-                
-                <div className="flex items-center gap-2 shrink-0">
-                  {imagePreview && (
+          {/* Input Area - Centered */}
+          <div className="fixed bottom-0 inset-x-0 bg-background/80 backdrop-blur-sm border-t border-border">
+            <div className="relative max-w-2xl mx-auto px-4 pb-4">
+              <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-lg sm:rounded-xl shadow-sm border border-border p-2 sm:p-3 relative z-10">
+                {/* Subject Selection */}
+                <div className="flex gap-1.5 mb-2 overflow-x-auto pb-1.5 scrollbar-hide -mx-1 px-1">
+                  {[
+                    { id: 'math', icon: Calculator, label: 'Math', prefix: 'Math Problem:' },
+                    { id: 'physics', icon: Atom, label: 'Physics', prefix: 'Physics Problem:' },
+                    { id: 'chemistry', icon: Beaker, label: 'Chemistry', prefix: 'Chemistry Problem:' },
+                    { id: 'essay', icon: PenTool, label: 'Essay', prefix: 'Essay Help:' },
+                    { id: 'general', icon: Book, label: 'General', prefix: 'General Question:' }
+                  ].map(({ id, icon: Icon, label, prefix }) => (
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={clearImagePreview}
-                      className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+                      key={id}
+                      variant={activeSubject === id ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setActiveSubject(id);
+                        if (question.trim()) {
+                          setQuestion(`${prefix}\n${question.trim()}`);
+                        }
+                      }}
+                      className={`h-7 px-2 whitespace-nowrap text-xs font-medium transition-all duration-200 ${
+                        activeSubject === id 
+                          ? 'shadow-sm' 
+                          : question.toLowerCase().startsWith(prefix.toLowerCase()) 
+                            ? 'bg-primary/10 border-primary' 
+                            : ''
+                      }`}
                     >
-                      <X className="h-4 w-4" />
+                      <Icon className="h-3 w-3 mr-1" />
+                      {label}
                     </Button>
-                  )}
+                  ))}
+                </div>
+
+                {/* Teacher indicator */}
+                {activeSubject && (
+                  <div className="px-1.5 pb-1.5 flex items-center gap-1.5">
+                    <span className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                      <Brain className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                      {activeSubject === 'math' && 'Math Teacher'}
+                      {activeSubject === 'physics' && 'Physics Teacher'}
+                      {activeSubject === 'chemistry' && 'Chemistry Teacher'}
+                      {activeSubject === 'essay' && 'Writing Teacher'}
+                      {activeSubject === 'general' && 'General Teacher'}
+                      <span className="text-primary/60">is ready to help</span>
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-end gap-1.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="h-8 w-8 shrink-0 rounded-lg hover:bg-secondary transition-all duration-200"
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                  </Button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  
+                  <div className="flex-1 relative">
+                    <textarea
+                      ref={textareaRef}
+                      value={question}
+                      onChange={(e) => {
+                        setQuestion(e.target.value)
+                        e.target.style.height = '36px'
+                        e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSubmit()
+                        }
+                      }}
+                      onPaste={handlePaste}
+                      placeholder="Type your question here, then select a subject above..."
+                      className="flex-1 bg-secondary/20 hover:bg-secondary/30 focus:bg-secondary/40 rounded-lg px-3 py-2 outline-none resize-none text-sm min-h-[36px] max-h-[120px] placeholder:text-muted-foreground w-full transition-colors duration-200"
+                      disabled={isLoading}
+                    />
+                    {imagePreview && (
+                      <div className="absolute -top-[68px] left-0">
+                        <div className="relative">
+                          <img
+                            src={imagePreview}
+                            alt="Preview"
+                            className="w-16 h-16 object-cover rounded-lg border border-border"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={clearImagePreview}
+                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
                   <Button
                     onClick={handleSubmit}
                     disabled={!question.trim() || isLoading}
-                    className="rounded-full px-3 h-8 text-xs font-medium whitespace-nowrap"
+                    className="rounded-lg px-3 h-8 text-xs font-medium whitespace-nowrap"
                   >
                     {isLoading ? (
                       <div className="flex items-center gap-1.5">
                         <Loader2 className="h-3 w-3 animate-spin" />
-                        <span>Processing</span>
+                        <span className="hidden sm:inline">Processing</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5">
                         <Send className="h-3 w-3" />
-                        <span>Send</span>
+                        <span className="hidden sm:inline">Send</span>
                       </div>
                     )}
                   </Button>
                 </div>
               </div>
-              
-              {imagePreview && (
-                <div className="mt-2 relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-24 h-24 object-cover rounded-lg border border-border"
-                  />
-                </div>
-              )}
             </div>
           </div>
         </div>
