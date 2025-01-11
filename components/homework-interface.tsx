@@ -584,6 +584,11 @@ export default function HomeworkInterface() {
                                       h3: ({ children }) => <h3 className="text-sm sm:text-base font-medium mt-2 mb-1 sm:mt-4 sm:mb-2">{children}</h3>,
                                       p: ({ children }) => {
                                         const processLatexInText = (text: string) => {
+                                          // Replace any remaining asterisks with \times before processing
+                                          text = text.replace(/\*/g, '\\times')
+                                            .replace(/(\d+)\s*x\s*(\d+)/g, '$1\\times$2')
+                                            .replace(/(\d+)\s*×\s*(\d+)/g, '$1\\times$2');
+
                                           // First, check if the text contains LaTeX \text{} commands without delimiters
                                           if (text.includes('\\text{') && !text.includes('$')) {
                                             // Wrap the entire text in display math delimiters
