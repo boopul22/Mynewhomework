@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const prompt = formData.get('prompt') as string;
     const userId = formData.get('userId') as string;
+    const subject = formData.get('subject') as string;
 
     if (!prompt) {
       throw new Error('No prompt provided');
@@ -26,6 +27,10 @@ export async function POST(request: NextRequest) {
       try {
         const messages = [
           {
+            role: "system",
+            content: `You are a specialized ${subject || 'general'} tutor. Format your response according to the subject's template structure. Use LaTeX for mathematical expressions: inline with single $ and display with double $$. For example: $x^2$ or $$\\frac{1}{2}$$`
+          },
+          {
             role: "user",
             content: prompt
           }
@@ -39,9 +44,17 @@ export async function POST(request: NextRequest) {
             const content = chunk?.choices?.[0]?.delta?.content || '';
             if (content) {
               // Process content to handle math expressions properly
-              const processedContent = content.replace(/\\\(/g, '\\\\(')
-                                            .replace(/\\\)/g, '\\\\)')
-                                            .replace(/\$/g, '\\$');
+              const processedContent = content
+                .replace(/\\\[/g, '$$')
+                .replace(/\\\]/g, '$$')
+                .replace(/\\\(/g, '$')
+                .replace(/\\\)/g, '$')
+                .replace(/\\begin\{equation\}/g, '$$')
+                .replace(/\\end\{equation\}/g, '$$')
+                .replace(/\\begin\{align\}/g, '$$')
+                .replace(/\\end\{align\}/g, '$$')
+                .replace(/\\begin\{aligned\}/g, '$$')
+                .replace(/\\end\{aligned\}/g, '$$');
               await writer.write(processedContent);
             }
           }
@@ -50,9 +63,17 @@ export async function POST(request: NextRequest) {
           const content = (chatCompletion as any)?.choices?.[0]?.message?.content || '';
           if (content) {
             // Process content to handle math expressions properly
-            const processedContent = content.replace(/\\\(/g, '\\\\(')
-                                        .replace(/\\\)/g, '\\\\)')
-                                        .replace(/\$/g, '\\$');
+            const processedContent = content
+              .replace(/\\\[/g, '$$')
+              .replace(/\\\]/g, '$$')
+              .replace(/\\\(/g, '$')
+              .replace(/\\\)/g, '$')
+              .replace(/\\begin\{equation\}/g, '$$')
+              .replace(/\\end\{equation\}/g, '$$')
+              .replace(/\\begin\{align\}/g, '$$')
+              .replace(/\\end\{align\}/g, '$$')
+              .replace(/\\begin\{aligned\}/g, '$$')
+              .replace(/\\end\{aligned\}/g, '$$');
             await writer.write(processedContent);
           } else {
             await writer.write('Sorry, I could not generate a response.');

@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User, X, Loader2, Atom, Beaker, PenTool } from 'lucide-react'
+import { Send, Calculator, Book, Microscope, History, Brain, Upload, Image as ImageIcon, Plus, Coins, LogOut, User, X, Loader2, Atom, Beaker, PenTool, BookOpen, GraduationCap, Menu } from 'lucide-react'
 import { useState, useRef, useCallback, useEffect } from "react"
 import ReactMarkdown from 'react-markdown'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
@@ -15,13 +15,23 @@ import { useChatHistory } from '@/lib/chat-history'
 import { useAuth } from '@/app/context/AuthContext'
 import { useQuestion } from '@/lib/subscription-service'
 import { toast } from '@/components/ui/use-toast'
-import { signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '@/app/firebase/config';
+import { signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
+import { auth } from '@/app/firebase/config'
 import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { useRouter } from 'next/navigation'
 import { createUserProfile } from '@/lib/user-service'
 import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
+import { cn } from '@/lib/utils'
+
+const subjects = [
+  { id: 'math', name: 'Mathematics', icon: Calculator, promptTemplate: 'math' },
+  { id: 'physics', name: 'Physics', icon: Atom, promptTemplate: 'physics' },
+  { id: 'chemistry', name: 'Chemistry', icon: Beaker, promptTemplate: 'chemistry' },
+  { id: 'writing', name: 'Writing', icon: PenTool, promptTemplate: 'essay' },
+  { id: 'literature', name: 'Literature', icon: BookOpen, promptTemplate: 'essay' },
+  { id: 'science', name: 'Science', icon: Microscope, promptTemplate: 'general' }
+]
 
 export default function HomeworkInterface() {
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +50,7 @@ export default function HomeworkInterface() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showCreditAlert, setShowCreditAlert] = useState(false);
   const router = useRouter();
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [activeSubject, setActiveSubject] = useState<string>('');
 
   // Error handler type
@@ -145,6 +155,9 @@ export default function HomeworkInterface() {
     const formData = new FormData();
     formData.append('prompt', question);
     formData.append('userId', user ? user.uid : 'anonymous');
+    // Add subject to the form data
+    const selectedSubject = subjects.find(s => s.id === activeSubject);
+    formData.append('subject', selectedSubject?.promptTemplate || 'general');
     if (imageFile) {
       formData.append('image', imageFile);
     }
@@ -334,348 +347,310 @@ export default function HomeworkInterface() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row items-center justify-between p-2 sm:p-4 border-b gap-2 sm:gap-0">
-        <div className="flex items-center justify-center w-full sm:w-auto sm:flex-1">
-          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-          </div>
-        </div>
+    <div className="flex h-screen bg-background overflow-hidden">
+      {/* Mobile Overlay */}
+      {isHistoryOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[90] lg:hidden"
+          onClick={() => setIsHistoryOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-        <div className="flex items-center space-x-2 shrink-0">
-          <ThemeToggle />
-          {user ? (
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="p-2">
-              <LogOut className="h-4 w-4" />
-            </Button>
-          ) : (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="flex items-center gap-2 text-sm"
-              onClick={handleSignIn}
-            >
-              <User className="h-3 w-3" />
-              <span>Login</span>
-            </Button>
-          )}
-        </div>
+      {/* Sidebar Container */}
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-[100] bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80",
+          "w-full max-w-[85%] sm:max-w-[380px] border-r border-border transition-transform duration-300 ease-out",
+          "lg:w-[320px] lg:relative lg:translate-x-0 lg:shrink-0",
+          isHistoryOpen ? "translate-x-0 shadow-xl" : "-translate-x-full"
+        )}
+      >
+        <HistorySlider
+          onSelectChat={handleSelectChat}
+          startNewChat={startNewChat}
+          isOpen={isHistoryOpen}
+          setIsOpen={setIsHistoryOpen}
+        />
       </div>
-      
-      {showCreditAlert && (
-        <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 p-3 rounded-lg mx-2 my-1 sm:m-4">
-          <div className="flex items-center space-x-2">
-            <Coins className="h-4 w-4 text-amber-500" />
-            <div>
-              <h4 className="font-semibold text-amber-900 dark:text-amber-100 text-sm">Question Limit Reached</h4>
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                {user 
-                  ? "You've reached your daily question limit. Upgrade your plan to ask more questions."
-                  : "Sign up to get more questions and unlock full access!"}
-              </p>
+
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+        {/* Top Header */}
+        <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-50">
+          <div className="flex items-center justify-between p-4 max-w-5xl mx-auto w-full">
+            <div className="flex items-center gap-4">
+              {/* Hamburger Menu - Now in header */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden"
+                onClick={() => setIsHistoryOpen(true)}
+              >
+                <Menu className="h-4 w-4" />
+              </Button>
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
+                <h1 className="text-lg font-semibold sm:text-xl">Homework Helper</h1>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <ThemeToggle />
+              {user ? (
+                <Button variant="ghost" onClick={handleSignOut} className="hidden sm:flex">
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
+              ) : (
+                <Button variant="default" onClick={handleSignIn} className="hidden sm:flex">
+                  <User className="h-4 w-4 mr-2" />
+                  Sign In
+                </Button>
+              )}
+              {/* Mobile-only buttons */}
+              {user ? (
+                <Button variant="ghost" size="icon" onClick={handleSignOut} className="sm:hidden">
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button variant="default" size="icon" onClick={handleSignIn} className="sm:hidden">
+                  <User className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
-          <div className="mt-2 flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push(user ? '/subscription' : '/login')}
-              className="text-amber-600 hover:text-amber-700 border-amber-300 w-full"
-            >
-              {user ? 'Upgrade Plan' : 'Sign Up Now'}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCreditAlert(false)}
-              className="text-amber-600 hover:text-amber-700 w-full"
-            >
-              Dismiss
-            </Button>
+        </header>
+
+        {/* Subject Selection - Scrollable on mobile */}
+        <div className="border-b border-border bg-background/95 overflow-x-auto scrollbar-none">
+          <div className="flex gap-1.5 p-2 sm:p-4 sm:gap-2 max-w-3xl mx-auto min-w-max w-full justify-center">
+            {subjects.map((subject) => (
+              <Button
+                key={subject.id}
+                variant={activeSubject === subject.id ? "default" : "ghost"}
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 h-8 sm:h-10"
+                onClick={() => setActiveSubject(subject.id)}
+              >
+                <subject.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="text-sm sm:text-base">{subject.name}</span>
+              </Button>
+            ))}
           </div>
         </div>
-      )}
-      
-      <div className="flex flex-1 relative h-[calc(100vh-4rem)] sm:h-[calc(100vh-2rem)]">
-        <HistorySlider onSelectChat={handleSelectChat} startNewChat={startNewChat} isOpen={isHistoryOpen} setIsOpen={setIsHistoryOpen} />
-        
-        <div className="flex-1 flex flex-col relative min-w-0">
-          {/* Answer Area */}
-          <div 
-            ref={answerRef} 
-            className="flex-1 overflow-y-auto overscroll-y-contain px-4 pb-32 mt-4 sm:mt-16 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] relative"
-            style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
-          >
-            {(answer || isLoading) && (
-              <div className="space-y-4 w-full max-w-2xl mx-auto pt-2 sm:pt-6 pb-24">
-                {/* User's Question Display */}
-                <div className="bg-secondary/30 rounded-lg p-4 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-primary">Your Question:</span>
-                  </div>
-                  <p className="text-sm text-foreground">{currentQuestionText || "Loading..."}</p>
-                </div>
-                
-                {/* AI's Answer Display */}
-                <div className="prose dark:prose-invert max-w-none text-foreground text-sm sm:text-base">
-                  {isLoading && !answer && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                      </div>
-                      <span>Thinking...</span>
-                    </div>
-                  )}
-                  {isStreaming && answer && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-1 h-1 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                    </div>
-                  )}
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      code({ className, children, ...props }) {
-                        const match = /language-(\w+)/.exec(className || '')
-                        if (match && match[1] === 'math') {
-                          return <BlockMath math={String(children).replace(/\n$/, '')} />
-                        }
-                        return match ? (
-                          <SyntaxHighlighter
-                            language={match[1]}
-                            style={vscDarkPlus as any}
-                            className="rounded-xl border border-border !bg-secondary/50 !mt-4 !mb-4 text-xs sm:text-sm p-2 sm:p-4 dark:!bg-secondary/30 overflow-x-auto"
-                            showLineNumbers={true}
-                            wrapLines={true}
-                          >
-                            {String(children).replace(/\n$/, '')}
-                          </SyntaxHighlighter>
-                        ) : (
-                          <code className="bg-secondary/50 dark:bg-secondary/30 text-foreground rounded-lg px-1.5 py-0.5 text-sm" {...props}>
-                            {children}
-                          </code>
-                        )
-                      },
-                      h1: ({ children }) => <h1 className="text-xl sm:text-2xl font-bold mt-4 sm:mt-6 mb-3 sm:mb-4">{children}</h1>,
-                      h2: ({ children }) => <h2 className="text-lg sm:text-xl font-bold mt-4 sm:mt-5 mb-2 sm:mb-3">{children}</h2>,
-                      h3: ({ children }) => <h3 className="text-base sm:text-lg font-semibold mt-3 sm:mt-4 mb-2">{children}</h3>,
-                      p: ({ children }) => {
-                        const childArray = React.Children.toArray(children)
-                        
-                        // Enhanced math detection for both inline and block math
-                        const hasInlineMath = childArray.some(child => 
-                          typeof child === 'string' && child.includes('$') && !child.includes('$$')
-                        )
-                        const hasBlockMath = childArray.some(child =>
-                          typeof child === 'string' && child.includes('$$')
-                        )
-                        
-                        if (!hasInlineMath && !hasBlockMath) {
-                          return <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4">{children}</p>
-                        }
 
-                        return (
-                          <p className="text-sm sm:text-base leading-relaxed mb-3 sm:mb-4">
-                            {childArray.map((child, index) => {
-                              if (typeof child !== 'string') return child
-                              
-                              // Handle block math first ($$...$$)
-                              const blockParts = child.split(/(\$\$[^\$]+\$\$)/g)
-                              return blockParts.map((part, i) => {
-                                if (part.startsWith('$$') && part.endsWith('$$')) {
-                                  const math = part.slice(2, -2)
-                                  return (
-                                    <div key={`${index}-block-${i}`} className="my-4 flex justify-center">
-                                      <BlockMath math={math} />
-                                    </div>
-                                  )
-                                }
-                                
-                                // Then handle inline math ($...$)
-                                const inlineParts = part.split(/(\$[^\$]+\$)/g)
-                                return inlineParts.map((inlinePart, j) => {
-                                  if (inlinePart.startsWith('$') && inlinePart.endsWith('$')) {
-                                    const math = inlinePart.slice(1, -1)
-                                    return <InlineMath key={`${index}-inline-${i}-${j}`} math={math} />
-                                  }
-                                  return inlinePart
-                                })
-                              })
-                            })}
-                          </p>
-                        )
-                      },
-                      ul: ({ children }) => <ul className="list-disc pl-4 sm:pl-6 mb-3 sm:mb-4 space-y-1 sm:space-y-2">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal pl-4 sm:pl-6 mb-3 sm:mb-4 space-y-1 sm:space-y-2">{children}</ol>,
-                      li: ({ children }) => <li className="text-sm sm:text-base">{children}</li>,
-                      blockquote: ({ children }) => (
-                        <blockquote className="border-l-4 border-primary/50 pl-3 sm:pl-4 italic my-3 sm:my-4 text-muted-foreground text-sm sm:text-base">
-                          {children}
-                        </blockquote>
-                      ),
-                      table: ({ children }) => (
-                        <div className="overflow-x-auto my-3 sm:my-4 -mx-2 sm:mx-0">
-                          <table className="min-w-full border border-border rounded-lg text-sm">
-                            {children}
-                          </table>
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto bg-muted/30">
+          <div className="min-h-full flex flex-col max-w-5xl mx-auto p-3 sm:p-6 w-full">
+            {/* Question Input Area */}
+            <Card className="shadow-sm bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+              <div className="p-3 sm:p-4">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      {activeSubject ? (
+                        <div className="text-primary">
+                          {(() => {
+                            const SubjectIcon = subjects.find(s => s.id === activeSubject)?.icon || Brain;
+                            return <SubjectIcon className="h-4 w-4" />;
+                          })()}
                         </div>
-                      ),
-                      th: ({ children }) => (
-                        <th className="border-b border-border bg-secondary/50 px-3 py-1.5 sm:px-4 sm:py-2 text-left font-semibold text-sm">
-                          {children}
-                        </th>
-                      ),
-                      td: ({ children }) => (
-                        <td className="border-b border-border px-3 py-1.5 sm:px-4 sm:py-2 text-sm">
-                          {children}
-                        </td>
-                      ),
+                      ) : (
+                        <Brain className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-sm font-medium">
+                        {activeSubject 
+                          ? `${subjects.find(s => s.id === activeSubject)?.name} Question`
+                          : 'Ask Your Question'}
+                      </h2>
+                    </div>
+                  </div>
+                  <textarea
+                    ref={textareaRef}
+                    value={question}
+                    onChange={(e) => {
+                      setQuestion(e.target.value)
+                      e.target.style.height = '36px'
+                      e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`
                     }}
-                    className="prose-pre:my-0"
-                  >
-                    {answer}
-                  </ReactMarkdown>
+                    onPaste={handlePaste}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSubmit()
+                      }
+                    }}
+                    placeholder={`Type your ${activeSubject ? subjects.find(s => s.id === activeSubject)?.name.toLowerCase() : 'homework'} question here...`}
+                    className="w-full resize-none bg-muted/50 rounded-lg px-3 py-2 text-sm sm:text-base min-h-[80px] max-h-[160px] focus:outline-none focus:ring-1 focus:ring-primary/20"
+                  />
+                  <div className="flex items-center justify-between">
+                    <div className="flex gap-2">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageUpload}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <ImageIcon className="h-4 w-4 mr-2" />
+                        Add Image
+                      </Button>
+                    </div>
+                    <Button
+                      onClick={handleSubmit}
+                      disabled={!question.trim() || isLoading}
+                      size="sm"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Get Answer'
+                      )}
+                    </Button>
+                  </div>
+                  {imagePreview && (
+                    <div className="relative w-24 h-24 sm:w-32 sm:h-32 mt-2">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover rounded-lg border border-border"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background shadow-sm border border-border"
+                        onClick={clearImagePreview}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
-          </div>
+            </Card>
 
-          {/* Input Area - Centered */}
-          <div className="fixed bottom-0 inset-x-0 bg-background/80 backdrop-blur-sm border-t border-border">
-            <div className="relative max-w-2xl mx-auto px-4 pb-4">
-              <div className="bg-background dark:bg-secondary/10 backdrop-blur-xl rounded-lg sm:rounded-xl shadow-sm border border-border p-2 sm:p-3 relative z-10">
-                {/* Subject Selection */}
-                <div className="flex gap-1.5 mb-2 overflow-x-auto pb-1.5 scrollbar-hide -mx-1 px-1">
-                  {[
-                    { id: 'math', icon: Calculator, label: 'Math', prefix: 'Math Problem:' },
-                    { id: 'physics', icon: Atom, label: 'Physics', prefix: 'Physics Problem:' },
-                    { id: 'chemistry', icon: Beaker, label: 'Chemistry', prefix: 'Chemistry Problem:' },
-                    { id: 'essay', icon: PenTool, label: 'Essay', prefix: 'Essay Help:' },
-                    { id: 'general', icon: Book, label: 'General', prefix: 'General Question:' }
-                  ].map(({ id, icon: Icon, label, prefix }) => (
-                    <Button
-                      key={id}
-                      variant={activeSubject === id ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setActiveSubject(id);
-                        if (question.trim()) {
-                          setQuestion(`${prefix}\n${question.trim()}`);
-                        }
-                      }}
-                      className={`h-7 px-2 whitespace-nowrap text-xs font-medium transition-all duration-200 ${
-                        activeSubject === id 
-                          ? 'shadow-sm' 
-                          : question.toLowerCase().startsWith(prefix.toLowerCase()) 
-                            ? 'bg-primary/10 border-primary' 
-                            : ''
-                      }`}
-                    >
-                      <Icon className="h-3 w-3 mr-1" />
-                      {label}
-                    </Button>
-                  ))}
-                </div>
-
-                {/* Teacher indicator */}
-                {activeSubject && (
-                  <div className="px-1.5 pb-1.5 flex items-center gap-1.5">
-                    <span className="text-[11px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                      <Brain className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                      {activeSubject === 'math' && 'Math Teacher'}
-                      {activeSubject === 'physics' && 'Physics Teacher'}
-                      {activeSubject === 'chemistry' && 'Chemistry Teacher'}
-                      {activeSubject === 'essay' && 'Writing Teacher'}
-                      {activeSubject === 'general' && 'General Teacher'}
-                      <span className="text-primary/60">is ready to help</span>
-                    </span>
+            {/* Answer Area */}
+            <div className="flex-1 mt-4">
+              <div className="space-y-4">
+                {!currentQuestionText && !answer ? (
+                  <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                      <GraduationCap className="h-8 w-8 text-primary" />
+                    </div>
+                    <h2 className="text-xl font-semibold mb-2">Welcome to Homework Helper</h2>
+                    <p className="text-muted-foreground max-w-md">
+                      Select a subject and ask any question. Our AI tutor will help you understand and learn better.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 pb-4">
+                    {currentQuestionText && (
+                      <Card className="overflow-hidden">
+                        <div className="p-2 sm:p-4 bg-muted/50 border-b">
+                          <div className="flex items-start gap-2 sm:gap-3">
+                            <div className="mt-1 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <User className="h-3 w-3 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0 pr-1 sm:pr-0">
+                              <p className="text-xs text-muted-foreground mb-1">Your Question</p>
+                              <div className="text-sm break-words">{currentQuestionText}</div>
+                            </div>
+                          </div>
+                        </div>
+                        {answer && (
+                          <div className="p-2 sm:p-4">
+                            <div className="flex items-start gap-1.5 sm:gap-3">
+                              <div className="mt-1 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                <Brain className="h-3 w-3 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0 -ml-0.5">
+                                <p className="text-xs text-muted-foreground mb-1">Answer</p>
+                                <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 sm:prose-p:my-4 sm:prose-ul:my-4 sm:prose-li:my-1">
+                                  <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{
+                                      h1: ({ children }) => <h1 className="text-xl font-bold mt-6 mb-3 -ml-0.5">{children}</h1>,
+                                      h2: ({ children }) => <h2 className="text-lg font-semibold mt-5 mb-2 -ml-0.5">{children}</h2>,
+                                      h3: ({ children }) => <h3 className="text-base font-medium mt-4 mb-2 -ml-0.5">{children}</h3>,
+                                      p: ({ children }) => {
+                                        const processLatexInText = (text: string) => {
+                                          const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/g);
+                                          return parts.map((part, index) => {
+                                            if (part.startsWith('$$') && part.endsWith('$$')) {
+                                              const math = part.slice(2, -2);
+                                              return <BlockMath key={index} math={math} />;
+                                            } else if (part.startsWith('$') && part.endsWith('$')) {
+                                              const math = part.slice(1, -1);
+                                              return <InlineMath key={index} math={math} />;
+                                            }
+                                            return part;
+                                          });
+                                        };
+                                        
+                                        if (typeof children === 'string') {
+                                          return <p className="text-sm leading-relaxed -ml-0.5">{processLatexInText(children)}</p>;
+                                        }
+                                        return <p className="text-sm leading-relaxed -ml-0.5">{children}</p>;
+                                      },
+                                      ul: ({ children }) => <ul className="list-disc pl-3 space-y-1 my-2">{children}</ul>,
+                                      li: ({ children }) => <li className="text-sm leading-relaxed -ml-1">{children}</li>,
+                                      code: ({ className, children, ...props }) => {
+                                        const match = /language-(\w+)/.exec(className || '');
+                                        const language = match ? match[1] : '';
+                                        
+                                        if (language === 'math') {
+                                          return <BlockMath math={String(children).trim()} />;
+                                        }
+                                        
+                                        return language ? (
+                                          <div className="rounded-lg overflow-hidden my-3 bg-muted">
+                                            <SyntaxHighlighter
+                                              style={vscDarkPlus}
+                                              language={language}
+                                              PreTag="div"
+                                              customStyle={{
+                                                margin: 0,
+                                                padding: '1rem',
+                                                fontSize: '0.875rem',
+                                                borderRadius: '0.5rem',
+                                                background: 'transparent'
+                                              }}
+                                            >
+                                              {String(children).replace(/\n$/, '')}
+                                            </SyntaxHighlighter>
+                                          </div>
+                                        ) : (
+                                          <code className={className} {...props}>
+                                            {children}
+                                          </code>
+                                        );
+                                      }
+                                    }}
+                                  >
+                                    {answer}
+                                  </ReactMarkdown>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    )}
                   </div>
                 )}
-
-                <div className="flex items-end gap-1.5">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="h-8 w-8 shrink-0 rounded-lg hover:bg-secondary transition-all duration-200"
-                  >
-                    <ImageIcon className="h-4 w-4" />
-                  </Button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageUpload}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  
-                  <div className="flex-1 relative">
-                    <textarea
-                      ref={textareaRef}
-                      value={question}
-                      onChange={(e) => {
-                        setQuestion(e.target.value)
-                        e.target.style.height = '36px'
-                        e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault()
-                          handleSubmit()
-                        }
-                      }}
-                      onPaste={handlePaste}
-                      placeholder="Type your question here, then select a subject above..."
-                      className="flex-1 bg-secondary/20 hover:bg-secondary/30 focus:bg-secondary/40 rounded-lg px-3 py-2 outline-none resize-none text-sm min-h-[36px] max-h-[120px] placeholder:text-muted-foreground w-full transition-colors duration-200"
-                      disabled={isLoading}
-                    />
-                    {imagePreview && (
-                      <div className="absolute -top-[68px] left-0">
-                        <div className="relative">
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="w-16 h-16 object-cover rounded-lg border border-border"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={clearImagePreview}
-                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-background border border-border hover:bg-destructive/10 hover:text-destructive transition-all duration-200"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={!question.trim() || isLoading}
-                    className="rounded-lg px-3 h-8 text-xs font-medium whitespace-nowrap"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center gap-1.5">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span className="hidden sm:inline">Processing</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1.5">
-                        <Send className="h-3 w-3" />
-                        <span className="hidden sm:inline">Send</span>
-                      </div>
-                    )}
-                  </Button>
-                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
