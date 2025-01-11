@@ -71,13 +71,13 @@ export default function HomeworkInterface() {
     }
   }
 
-  const handlePaste = async (event: React.ClipboardEvent) => {
+  const handlePaste = async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const items = event.clipboardData?.items;
-    let hasHandledItem = false;
     
     if (items) {
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
+          event.preventDefault();
           const file = items[i].getAsFile();
           if (file) {
             const reader = new FileReader();
@@ -85,20 +85,7 @@ export default function HomeworkInterface() {
               setImagePreview(reader.result as string);
             };
             reader.readAsDataURL(file);
-            hasHandledItem = true;
             break;
-          }
-        }
-      }
-
-      // If no image was found, try to get text
-      if (!hasHandledItem) {
-        const text = event.clipboardData.getData('text');
-        if (text) {
-          setQuestion(prev => prev + text);
-          if (textareaRef.current) {
-            textareaRef.current.style.height = 'auto';
-            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
           }
         }
       }
@@ -538,8 +525,8 @@ export default function HomeworkInterface() {
             </Card>
 
             {/* Answer Area */}
-            <div className="flex-1 mt-4">
-              <div className="space-y-4">
+            <div className="flex-1 mt-3 sm:mt-4">
+              <div className="space-y-3 sm:space-y-4">
                 {!currentQuestionText && !answer ? (
                   <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
                     <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
@@ -551,35 +538,35 @@ export default function HomeworkInterface() {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-4 pb-4">
+                  <div className="space-y-3 sm:space-y-4 pb-4">
                     {currentQuestionText && (
-                      <Card className="overflow-hidden">
-                        <div className="p-2 sm:p-4 bg-muted/50 border-b">
+                      <Card className="overflow-hidden border-0 sm:border bg-transparent sm:bg-background">
+                        <div className="p-3 sm:p-4 bg-muted/30 sm:bg-muted/50 border-b">
                           <div className="flex items-start gap-2 sm:gap-3">
                             <div className="mt-1 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                               <User className="h-3 w-3 text-primary" />
                             </div>
-                            <div className="flex-1 min-w-0 pr-1 sm:pr-0">
+                            <div className="flex-1 min-w-0">
                               <p className="text-xs text-muted-foreground mb-1">Your Question</p>
                               <div className="text-sm break-words">{currentQuestionText}</div>
                             </div>
                           </div>
                         </div>
                         {answer && (
-                          <div className="p-2 sm:p-4">
-                            <div className="flex items-start gap-1.5 sm:gap-3">
+                          <div className="p-3 sm:p-4 bg-transparent sm:bg-background">
+                            <div className="flex items-start gap-2 sm:gap-3">
                               <div className="mt-1 h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                                 <Brain className="h-3 w-3 text-primary" />
                               </div>
-                              <div className="flex-1 min-w-0 -ml-0.5">
+                              <div className="flex-1 min-w-0">
                                 <p className="text-xs text-muted-foreground mb-1">Answer</p>
-                                <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 sm:prose-p:my-4 sm:prose-ul:my-4 sm:prose-li:my-1">
+                                <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 sm:prose-p:my-2 sm:prose-ul:my-2 sm:prose-li:my-1">
                                   <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{
-                                      h1: ({ children }) => <h1 className="text-xl font-bold mt-6 mb-3 -ml-0.5">{children}</h1>,
-                                      h2: ({ children }) => <h2 className="text-lg font-semibold mt-5 mb-2 -ml-0.5">{children}</h2>,
-                                      h3: ({ children }) => <h3 className="text-base font-medium mt-4 mb-2 -ml-0.5">{children}</h3>,
+                                      h1: ({ children }) => <h1 className="text-lg sm:text-xl font-bold mt-4 mb-2 sm:mt-6 sm:mb-3">{children}</h1>,
+                                      h2: ({ children }) => <h2 className="text-base sm:text-lg font-semibold mt-3 mb-1.5 sm:mt-5 sm:mb-2">{children}</h2>,
+                                      h3: ({ children }) => <h3 className="text-sm sm:text-base font-medium mt-2 mb-1 sm:mt-4 sm:mb-2">{children}</h3>,
                                       p: ({ children }) => {
                                         const processLatexInText = (text: string) => {
                                           const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/g);
@@ -596,12 +583,12 @@ export default function HomeworkInterface() {
                                         };
                                         
                                         if (typeof children === 'string') {
-                                          return <p className="text-sm leading-relaxed -ml-0.5">{processLatexInText(children)}</p>;
+                                          return <p className="text-sm leading-relaxed">{processLatexInText(children)}</p>;
                                         }
-                                        return <p className="text-sm leading-relaxed -ml-0.5">{children}</p>;
+                                        return <p className="text-sm leading-relaxed">{children}</p>;
                                       },
-                                      ul: ({ children }) => <ul className="list-disc pl-3 space-y-1 my-2">{children}</ul>,
-                                      li: ({ children }) => <li className="text-sm leading-relaxed -ml-1">{children}</li>,
+                                      ul: ({ children }) => <ul className="list-disc pl-4 space-y-1 my-1.5 sm:my-2">{children}</ul>,
+                                      li: ({ children }) => <li className="text-sm leading-relaxed">{children}</li>,
                                       code: ({ className, children, ...props }) => {
                                         const match = /language-(\w+)/.exec(className || '');
                                         const language = match ? match[1] : '';
@@ -611,14 +598,14 @@ export default function HomeworkInterface() {
                                         }
                                         
                                         return language ? (
-                                          <div className="rounded-lg overflow-hidden my-3 bg-muted">
+                                          <div className="rounded-lg overflow-hidden my-2 sm:my-3 bg-muted">
                                             <SyntaxHighlighter
                                               style={vscDarkPlus}
                                               language={language}
                                               PreTag="div"
                                               customStyle={{
                                                 margin: 0,
-                                                padding: '1rem',
+                                                padding: '0.75rem',
                                                 fontSize: '0.875rem',
                                                 borderRadius: '0.5rem',
                                                 background: 'transparent'
@@ -628,7 +615,7 @@ export default function HomeworkInterface() {
                                             </SyntaxHighlighter>
                                           </div>
                                         ) : (
-                                          <code className={className} {...props}>
+                                          <code className={cn("bg-muted px-1.5 py-0.5 rounded text-sm", className)} {...props}>
                                             {children}
                                           </code>
                                         );
