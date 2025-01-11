@@ -17,7 +17,7 @@ export const groqVisionConfig = {
 
 export async function processImageWithGroq(
   base64Image: string,
-  prompt: string = "Analyze thoroughly and write the question in a clear and proper format, focusing only on the question."
+  prompt: string = `just extract the text from the image`
 ) {
   try {
     const formattedBase64 = base64Image.includes('base64,') 

@@ -97,7 +97,14 @@ export async function POST(request: NextRequest) {
                 .replace(/\\begin\{align\}/g, '$$')
                 .replace(/\\end\{align\}/g, '$$')
                 .replace(/\\begin\{aligned\}/g, '$$')
-                .replace(/\\end\{aligned\}/g, '$$');
+                .replace(/\\end\{aligned\}/g, '$$')
+                // Ensure proper multiplication symbol rendering
+                .replace(/\b(\d+)\s*\.\s*(\d+)\b/g, '$1\\times$2')  // Replace dots between numbers
+                .replace(/\b(\d+)\s*\*\s*(\d+)\b/g, '$1\\times$2')  // Replace asterisks
+                .replace(/\b(\d+)\s*x\s*(\d+)\b/g, '$1\\times$2')   // Replace 'x' between numbers
+                .replace(/\b(\d+)\s*×\s*(\d+)\b/g, '$1\\times$2')   // Replace unicode multiplication
+                .replace(/(?<=\$[^$]*)\s*\.\s*(?=[^$]*\$)/g, '\\times')  // Replace dots in inline math
+                .replace(/(?<=\$\$[^$]*)\s*\.\s*(?=[^$]*\$\$)/g, '\\times');  // Replace dots in display math
               await writer.write(processedContent);
             }
           }
@@ -116,7 +123,14 @@ export async function POST(request: NextRequest) {
               .replace(/\\begin\{align\}/g, '$$')
               .replace(/\\end\{align\}/g, '$$')
               .replace(/\\begin\{aligned\}/g, '$$')
-              .replace(/\\end\{aligned\}/g, '$$');
+              .replace(/\\end\{aligned\}/g, '$$')
+              // Ensure proper multiplication symbol rendering
+              .replace(/\b(\d+)\s*\.\s*(\d+)\b/g, '$1\\times$2')  // Replace dots between numbers
+              .replace(/\b(\d+)\s*\*\s*(\d+)\b/g, '$1\\times$2')  // Replace asterisks
+              .replace(/\b(\d+)\s*x\s*(\d+)\b/g, '$1\\times$2')   // Replace 'x' between numbers
+              .replace(/\b(\d+)\s*×\s*(\d+)\b/g, '$1\\times$2')   // Replace unicode multiplication
+              .replace(/(?<=\$[^$]*)\s*\.\s*(?=[^$]*\$)/g, '\\times')  // Replace dots in inline math
+              .replace(/(?<=\$\$[^$]*)\s*\.\s*(?=[^$]*\$\$)/g, '\\times');  // Replace dots in display math
             await writer.write(processedContent);
           } else {
             await writer.write('Sorry, I could not generate a response.');

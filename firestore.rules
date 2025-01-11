@@ -81,5 +81,11 @@ service cloud.firestore {
       allow update: if isAuthenticated() && request.auth.uid == resource.data.userId;
       allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isAdmin());
     }
+    
+    // Feedback collection
+    match /feedback/{feedbackId} {
+      allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow create: if true; // Allow anyone to submit feedback
+    }
   }
 } 

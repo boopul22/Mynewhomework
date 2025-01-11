@@ -23,6 +23,8 @@ import { createUserProfile } from '@/lib/user-service'
 import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
 import { cn } from '@/lib/utils'
+import { FeedbackBox } from './feedback-box'
+import { AnswerRating } from './answer-rating'
 
 const subjects = [
   { id: 'math', name: 'Mathematics', icon: Calculator, promptTemplate: 'math' },
@@ -150,7 +152,7 @@ export default function HomeworkInterface() {
     setIsStreaming(true);
     setAnswer("");
     // Set currentQuestionText for both image and text cases
-    setCurrentQuestionText(imagePreview ? "Image Question" : question);
+    setCurrentQuestionText(question || "Loading question from image...");
     setQuestion("");
     if (textareaRef.current) {
       textareaRef.current.style.height = '36px';
@@ -191,10 +193,29 @@ export default function HomeworkInterface() {
 
       let response;
       let fullResponse = '';
-
-      // If image is present, add it to formData
+      
+      // If image is present, add it to formData and process it
       if (imagePreview) {
         formData.append('image', imagePreview);
+        try {
+          const extractedText = await fetch('/api/groq-vision', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              image: imagePreview,
+              prompt: `Extract and format the question from this image.`
+            }),
+          }).then(res => res.json());
+
+          if (extractedText?.result) {
+            // Update the displayed question text with the extracted text
+            setCurrentQuestionText(extractedText.result.trim());
+          }
+        } catch (error) {
+          console.error('Error extracting text from image:', error);
+        }
       }
       
       // Add the text prompt if it exists
@@ -376,9 +397,9 @@ export default function HomeworkInterface() {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
         {/* Top Header */}
-        <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-50">
+        <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 z-50 sticky top-0">
           <div className="flex items-center justify-between p-4 max-w-5xl mx-auto w-full">
             <div className="flex items-center gap-4">
               {/* Hamburger Menu - Now in header */}
@@ -423,7 +444,7 @@ export default function HomeworkInterface() {
         </header>
 
         {/* Subject Selection - Scrollable on mobile */}
-        <div className="border-b border-border bg-background/95 overflow-x-auto scrollbar-none touch-pan-x">
+        <div className="border-b border-border bg-background/95 overflow-x-auto scrollbar-none touch-pan-x sticky top-[73px] z-40">
           <div className="flex gap-1.5 p-2 sm:p-4 sm:gap-2 max-w-3xl mx-auto min-w-max w-full justify-center">
             {subjects.map((subject) => (
               <Button
@@ -440,8 +461,8 @@ export default function HomeworkInterface() {
         </div>
 
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto bg-muted/30 touch-pan-y">
-          <div className="min-h-full flex flex-col max-w-5xl mx-auto p-3 sm:p-6 w-full">
+        <div className="flex-1 overflow-y-auto bg-muted/30 touch-pan-y relative">
+          <div className="min-h-full flex flex-col max-w-5xl mx-auto p-3 sm:p-6 w-full pb-20">
             {/* Question Input Area */}
             <Card className="shadow-sm bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
               <div className="p-3 sm:p-4">
@@ -563,7 +584,47 @@ export default function HomeworkInterface() {
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-muted-foreground mb-1">Your Question</p>
-                              <div className="text-sm break-words">{currentQuestionText}</div>
+                              <div className="text-sm break-words prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    p: ({ children }) => {
+                                      const processLatexInText = (text: string) => {
+                                        // Replace any remaining asterisks with \times before processing
+                                        text = text.replace(/\*/g, '\\times')
+                                          .replace(/(\d+)\s*x\s*(\d+)/g, '$1\\times$2')
+                                          .replace(/(\d+)\s*×\s*(\d+)/g, '$1\\times$2');
+
+                                        // First, check if the text contains LaTeX \text{} commands without delimiters
+                                        if (text.includes('\\text{') && !text.includes('$')) {
+                                          // Wrap the entire text in display math delimiters
+                                          return [<BlockMath key={0} math={text} />];
+                                        }
+                                        
+                                        // Otherwise, process normal inline and block math delimiters
+                                        const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/g);
+                                        return parts.map((part, index) => {
+                                          if (part.startsWith('$$') && part.endsWith('$$')) {
+                                            const math = part.slice(2, -2);
+                                            return <BlockMath key={index} math={math} />;
+                                          } else if (part.startsWith('$') && part.endsWith('$')) {
+                                            const math = part.slice(1, -1);
+                                            return <InlineMath key={index} math={math} />;
+                                          }
+                                          return part;
+                                        });
+                                      };
+                                      
+                                      if (typeof children === 'string') {
+                                        return <p className="text-sm leading-relaxed">{processLatexInText(children)}</p>;
+                                      }
+                                      return <p className="text-sm leading-relaxed">{children}</p>;
+                                    }
+                                  }}
+                                >
+                                  {currentQuestionText}
+                                </ReactMarkdown>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -654,6 +715,13 @@ export default function HomeworkInterface() {
                                 </div>
                               </div>
                             </div>
+                            {answer && (
+                              <AnswerRating
+                                questionId={currentChatId || 'anonymous'}
+                                question={currentQuestionText}
+                                answer={answer}
+                              />
+                            )}
                           </div>
                         )}
                       </Card>
@@ -663,6 +731,11 @@ export default function HomeworkInterface() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Fixed Feedback Box */}
+        <div className="fixed bottom-0 right-0 z-50">
+          <FeedbackBox />
         </div>
       </main>
     </div>
