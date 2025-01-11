@@ -570,6 +570,13 @@ export default function HomeworkInterface() {
                                       h3: ({ children }) => <h3 className="text-sm sm:text-base font-medium mt-2 mb-1 sm:mt-4 sm:mb-2">{children}</h3>,
                                       p: ({ children }) => {
                                         const processLatexInText = (text: string) => {
+                                          // First, check if the text contains LaTeX \text{} commands without delimiters
+                                          if (text.includes('\\text{') && !text.includes('$')) {
+                                            // Wrap the entire text in display math delimiters
+                                            return [<BlockMath key={0} math={text} />];
+                                          }
+                                          
+                                          // Otherwise, process normal inline and block math delimiters
                                           const parts = text.split(/(\$\$.*?\$\$|\$.*?\$)/g);
                                           return parts.map((part, index) => {
                                             if (part.startsWith('$$') && part.endsWith('$$')) {

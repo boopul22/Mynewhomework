@@ -235,7 +235,7 @@ Response Format:
 };
 
 export const groqConfig = {
-  model: "llama-3.3-70b-versatile",
+  model: "llama-3.1-70b-versatile",
   temperature: 1,
   maxTokens: 1024,
   topP: 1,
