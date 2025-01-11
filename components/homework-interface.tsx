@@ -137,23 +137,20 @@ export default function HomeworkInterface() {
   }, [user, loadMessages, currentChatId, createNewChat]);
 
   const handleSubmit = async () => {
-    if (!question.trim()) return;
+    if (!question.trim() && !imagePreview) return;
 
     const formData = new FormData();
-    formData.append('prompt', question);
     formData.append('userId', user ? user.uid : 'anonymous');
     // Add subject to the form data
     const selectedSubject = subjects.find(s => s.id === activeSubject);
     formData.append('subject', selectedSubject?.promptTemplate || 'general');
-    if (imageFile) {
-      formData.append('image', imageFile);
-    }
 
     // Clear previous state and prepare UI
     setIsLoading(true);
     setIsStreaming(true);
     setAnswer("");
-    setCurrentQuestionText(question);
+    // Set currentQuestionText for both image and text cases
+    setCurrentQuestionText(imagePreview ? "Image Question" : question);
     setQuestion("");
     if (textareaRef.current) {
       textareaRef.current.style.height = '36px';
@@ -192,48 +189,65 @@ export default function HomeworkInterface() {
         return;
       }
 
-      // Use Groq endpoint
-      const response = await fetch('/api/groq', {
+      let response;
+      let fullResponse = '';
+
+      // If image is present, add it to formData
+      if (imagePreview) {
+        formData.append('image', imagePreview);
+      }
+      
+      // Add the text prompt if it exists
+      if (question.trim()) {
+        formData.append('prompt', question);
+      }
+
+      // Use the unified Groq endpoint that handles both image and text
+      response = await fetch('/api/groq', {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`)
+        throw new Error(`API request failed with status ${response.status}`);
       }
 
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No reader available')
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader available');
 
-      const decoder = new TextDecoder()
-      let fullResponse = ''
+      const decoder = new TextDecoder();
 
       // Process the stream
       while (true) {
-        const { value, done } = await reader.read()
-        if (done) break
+        const { value, done } = await reader.read();
+        if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true })
-        fullResponse += chunk
-        setAnswer(prev => prev + chunk)
-        scrollToBottom()
+        const chunk = decoder.decode(value, { stream: true });
+        fullResponse += chunk;
+        setAnswer(prev => prev + chunk);
+        scrollToBottom();
       }
 
       // Add to chat history after getting full response
       if (currentChatId) {
-        await addMessage(currentQuestionText, fullResponse, currentChatId)
+        await addMessage(currentQuestionText, fullResponse, currentChatId);
       } else {
-        const newChatId = createNewChat()
-        setCurrentChatId(newChatId)
-        await addMessage(currentQuestionText, fullResponse, newChatId)
+        const newChatId = createNewChat();
+        setCurrentChatId(newChatId);
+        await addMessage(currentQuestionText, fullResponse, newChatId);
+      }
+      
+      // Clear image preview after processing
+      if (imagePreview) {
+        clearImagePreview();
       }
       
     } catch (error: any) {
-      setAnswer(`Sorry, I encountered an error: ${error.message || 'Unknown error'}`)
+      setAnswer(`Sorry, I encountered an error: ${error.message || 'Unknown error'}`);
     } finally {
-      setIsLoading(false)
-      setIsStreaming(false)
-      scrollToBottom()
+      setIsLoading(false);
+      setIsStreaming(false);
+      scrollToBottom();
     }
   }
 
@@ -494,7 +508,7 @@ export default function HomeworkInterface() {
                     </div>
                     <Button
                       onClick={handleSubmit}
-                      disabled={!question.trim() || isLoading}
+                      disabled={(!question.trim() && !imagePreview) || isLoading}
                       size="sm"
                     >
                       {isLoading ? (
@@ -528,7 +542,7 @@ export default function HomeworkInterface() {
             {/* Answer Area */}
             <div className="flex-1 mt-3 sm:mt-4">
               <div className="space-y-3 sm:space-y-4">
-                {!currentQuestionText && !answer ? (
+                {!currentQuestionText && !answer && !imagePreview ? (
                   <div className="flex flex-col items-center justify-center min-h-[50vh] text-center p-4">
                     <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                       <GraduationCap className="h-8 w-8 text-primary" />
@@ -561,7 +575,7 @@ export default function HomeworkInterface() {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs text-muted-foreground mb-1">Answer</p>
-                                <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 sm:prose-p:my-2 sm:prose-ul:my-2 sm:prose-li:my-1">
+                                <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-p:my-1.5 prose-ul:my-1.5 prose-li:my-0.5 sm:prose-p:my-2 sm:prose-ul:my-2 sm:prose-li:my-1 [&_.katex-display]:my-4 [&_.katex]:leading-normal [&_.katex-html]:overflow-x-auto [&_.katex-html]:overflow-y-hidden">
                                   <ReactMarkdown
                                     remarkPlugins={[remarkGfm]}
                                     components={{

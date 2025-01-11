@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { startGroqChatSession } from '@/lib/groq';
+import { processImageWithGroq } from '@/lib/groq-vision';
 
 export async function POST(request: NextRequest) {
   const encoder = new TextEncoder();
@@ -9,9 +10,10 @@ export async function POST(request: NextRequest) {
     const prompt = formData.get('prompt') as string;
     const userId = formData.get('userId') as string;
     const subject = formData.get('subject') as string;
+    const imageData = formData.get('image') as string;
 
-    if (!prompt) {
-      throw new Error('No prompt provided');
+    if (!prompt && !imageData) {
+      throw new Error('No prompt or image provided');
     }
 
     // Create transform stream to handle the response
@@ -25,6 +27,47 @@ export async function POST(request: NextRequest) {
     (async () => {
       const writer = stream.writable.getWriter();
       try {
+        let finalPrompt = prompt;
+
+        // If there's an image, process it first with vision model
+        if (imageData) {
+          try {
+            const extractedText = await processImageWithGroq(
+              imageData,
+              `Analyze this image and extract the question or problem. Follow these formatting rules:
+              1. For mathematical expressions, use LaTeX notation with $ for inline and $$ for display math
+              2. Use \\times for multiplication, never use * or x
+              3. Format fractions as \\frac{numerator}{denominator}
+              4. Format powers using ^, like $x^2$
+              5. Format square roots as \\sqrt{x}
+              6. If it's a word problem, clearly state the question
+              7. If it's a math/physics/chemistry problem, first state the problem, then list any given values or variables
+              8. Include all relevant context and information from the image
+              
+              Format your response as a clear, well-structured question that can be answered.`
+            );
+            // Process the extracted text to ensure proper math formatting
+            finalPrompt = extractedText
+              .replace(/\*/g, '\\times')  // Replace any remaining * with \times
+              .replace(/(\d+)\s*x\s*(\d+)/g, '$1\\times$2')  // Replace x between numbers with \times
+              .replace(/(\d+)\s*×\s*(\d+)/g, '$1\\times$2')  // Replace × with \times
+              .replace(/(\d+)\/(\d+)/g, '\\frac{$1}{$2}')    // Convert simple fractions to LaTeX
+              .trim();
+
+            // Add subject-specific formatting if needed
+            if (subject === 'math' || subject === 'physics') {
+              finalPrompt = `${subject.toUpperCase()} PROBLEM:\n\n${finalPrompt}`;
+            } else if (subject === 'chemistry') {
+              finalPrompt = `CHEMISTRY PROBLEM:\n\n${finalPrompt}`;
+            }
+          } catch (error) {
+            console.error('Error processing image:', error);
+            await writer.write('Sorry, I had trouble processing the image. Please try again or type your question.');
+            await writer.close();
+            return;
+          }
+        }
+
         const messages = [
           {
             role: "system",
@@ -32,7 +75,7 @@ export async function POST(request: NextRequest) {
           },
           {
             role: "user",
-            content: prompt
+            content: finalPrompt
           }
         ];
 
